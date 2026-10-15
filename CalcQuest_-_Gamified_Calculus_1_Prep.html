@@ -1,0 +1,2515 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CalcQuest | Gamified Calculus 1 Readiness & Interactive Lab</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        obsidian: '#090D16',
+                        slateCard: '#111827',
+                        slateBorder: '#1F2937',
+                        accentCyan: '#06B6D4',
+                        accentIndigo: '#6366F1',
+                        accentEmerald: '#10B981',
+                        accentAmber: '#F59E0B',
+                        accentRose: '#F43F5E',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+        body {
+            background-color: #090D16;
+            color: #F3F4F6;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Glassmorphism & Custom Scrollbar */
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.78);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card {
+            background: linear-gradient(145deg, rgba(31, 41, 55, 0.65) 0%, rgba(17, 24, 39, 0.85) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:hover {
+            border-color: rgba(6, 182, 212, 0.35);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.6), 0 0 15px -3px rgba(6, 182, 212, 0.12);
+        }
+        .math-expr {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(6, 182, 212, 0.1);
+            color: #67E8F9;
+            padding: 0.1rem 0.38rem;
+            border-radius: 0.35rem;
+            font-size: 0.92em;
+            border: 1px solid rgba(6, 182, 212, 0.2);
+            display: inline-block;
+        }
+        /* Custom Range Sliders */
+        input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: #1F2937;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: #06B6D4;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -7px;
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.65);
+            border: 2px solid #ECFEFF;
+            transition: transform 0.15s ease;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+        /* Animations */
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(6, 182, 212, 0); }
+        }
+        .node-active {
+            animation: pulseGlow 2.4s infinite;
+        }
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(0.95); }
+            100% { opacity: 0; transform: translateY(-36px) scale(1.1); }
+        }
+        .xp-float {
+            animation: floatUp 1.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            pointer-events: none;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090D16;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1F2937;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #374151;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
+
+    <!-- Top Gamified HUD Bar -->
+    <header class="sticky top-0 z-40 glass-panel border-b border-gray-800/80 px-4 py-3 sm:px-6">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+            <!-- Brand Logo -->
+            <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('map')">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 border border-white/15">
+                    <span class="font-mono font-extrabold text-xl text-white tracking-tighter">&int;dx</span>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-bold text-lg tracking-tight text-white">CalcQuest</h1>
+                        <span class="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-semibold">Calc 1 Prep</span>
+                    </div>
+                    <p class="text-xs text-gray-400 hidden sm:block">Interactive Readiness & Visual Mastery Lab</p>
+                </div>
+            </div>
+
+            <!-- Desktop Navigation Pills -->
+            <nav class="hidden md:flex items-center gap-1.5 bg-gray-900/90 p-1.5 rounded-xl border border-gray-800">
+                <button onclick="switchTab('map')" id="nav-desktop-map" class="nav-btn px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                    <i data-lucide="map" class="w-4 h-4"></i> Skill Path
+                </button>
+                <button onclick="switchTab('practice')" id="nav-desktop-practice" class="nav-btn px-3.5 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white transition-all flex items-center gap-2">
+                    <i data-lucide="zap" class="w-4 h-4"></i> Practice Arena
+                </button>
+                <button onclick="switchTab('labs')" id="nav-desktop-labs" class="nav-btn px-3.5 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white transition-all flex items-center gap-2">
+                    <i data-lucide="sliders" class="w-4 h-4"></i> Visual Labs
+                </button>
+                <button onclick="switchTab('resources')" id="nav-desktop-resources" class="nav-btn px-3.5 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white transition-all flex items-center gap-2">
+                    <i data-lucide="book-open" class="w-4 h-4"></i> Tutor Hub
+                </button>
+            </nav>
+
+            <!-- Player Telemetry Stats (XP, Rank, Streak, Audio, Reset) -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Streak Counter -->
+                <div class="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/25 px-2.5 py-1.5 rounded-xl" title="Current Answer Streak">
+                    <i data-lucide="flame" class="w-4 h-4 text-amber-400 fill-amber-400/30"></i>
+                    <span id="hud-streak" class="font-mono font-bold text-sm text-amber-300">0</span>
+                </div>
+
+                <!-- XP & Level Progress -->
+                <div class="flex items-center gap-2.5 bg-gray-900/90 border border-gray-800 px-3 py-1.5 rounded-xl">
+                    <div class="text-right">
+                        <div class="flex items-center gap-1.5">
+                            <span id="hud-level-badge" class="text-xs font-mono font-bold text-indigo-400">LVL 1</span>
+                            <span id="hud-rank-title" class="text-xs font-medium text-gray-300 hidden sm:inline">Novice Grappler</span>
+                        </div>
+                        <div class="w-20 sm:w-28 h-1.5 bg-gray-800 rounded-full overflow-hidden mt-1">
+                            <div id="hud-xp-bar" class="h-full bg-gradient-to-r from-cyan-400 to-indigo-500 transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="pl-1 border-l border-gray-800 text-center">
+                        <span id="hud-xp-text" class="font-mono font-bold text-xs sm:text-sm text-cyan-300">0</span>
+                        <span class="block text-[10px] font-mono text-gray-500 uppercase">XP</span>
+                    </div>
+                </div>
+
+                <!-- Sound Toggle -->
+                <button id="sound-toggle-btn" onclick="toggleSound()" class="p-2 rounded-xl bg-gray-900/90 border border-gray-800 text-gray-300 hover:text-cyan-400 hover:border-cyan-500/40 transition-colors" title="Toggle Synthesized Sound Effects">
+                    <i data-lucide="volume-2" id="sound-icon" class="w-4 h-4"></i>
+                </button>
+
+                <!-- Settings / Reset Modal Trigger -->
+                <button onclick="openResetModal()" class="p-2 rounded-xl bg-gray-900/90 border border-gray-800 text-gray-400 hover:text-rose-400 hover:border-rose-500/40 transition-colors" title="Reset Progress">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Floating Toast Notification Container -->
+    <div id="toast-container" class="fixed top-20 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 sm:px-6 pb-24 md:pb-12">
+
+        <!-- ==========================================
+             VIEW 1: GAMIFIED PROGRESSION MAP
+             ========================================== -->
+        <section id="view-map" class="space-y-8">
+            <!-- Hero Readiness Banner -->
+            <div class="glass-card rounded-2xl p-6 sm:p-8 relative overflow-hidden">
+                <div class="absolute -right-12 -top-12 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute -left-12 -bottom-12 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                
+                <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    <div class="space-y-2 max-w-2xl">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-medium">
+                            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                            <span>90% of Calculus 1 struggles come from Pre-Calc Algebra & Trig gaps</span>
+                        </div>
+                        <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                            Master the 5 Pillars of Calculus Readiness
+                        </h2>
+                        <p class="text-gray-300 text-sm sm:text-base leading-relaxed">
+                            Conquer each module along the progression path, experiment with live function & limit visualizers, and earn XP to reach <span class="text-cyan-300 font-semibold">Calculus Sovereign</span> rank.
+                        </p>
+                    </div>
+
+                    <!-- Overall Completion Card -->
+                    <div class="bg-gray-950/70 border border-gray-800/90 rounded-2xl p-4 sm:p-5 min-w-[240px] flex flex-col justify-between gap-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-mono uppercase tracking-wider text-gray-400">Overall Mastery</span>
+                            <span id="overall-mastery-pct" class="font-mono font-bold text-lg text-cyan-400">0%</span>
+                        </div>
+                        <div class="w-full h-2.5 bg-gray-800 rounded-full overflow-hidden">
+                            <div id="overall-mastery-bar" class="h-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-indigo-500 transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                        <div class="flex items-center justify-between text-xs text-gray-400 pt-1 border-t border-gray-800/80">
+                            <span>Solved: <strong id="stat-solved-count" class="text-white font-mono">0/25</strong></span>
+                            <span>Best Streak: <strong id="stat-best-streak" class="text-amber-300 font-mono">0</strong></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5-Module Progression Path & Quick Lab Callout Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                <!-- Left 2 Columns: The 5-Module Progression Nodes -->
+                <div class="lg:col-span-2 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i data-lucide="git-branch" class="w-5 h-5 text-cyan-400"></i>
+                            5-Module Progression Path
+                        </h3>
+                        <span class="text-xs text-gray-400">Click any module to enter its Practice Arena</span>
+                    </div>
+
+                    <!-- Dynamic Module Path List -->
+                    <div id="module-progression-container" class="space-y-4 relative">
+                        <!-- Rendered dynamically via JS -->
+                    </div>
+                </div>
+
+                <!-- Right Column: Interactive Labs Preview & Rank Ladder -->
+                <div class="space-y-6">
+                    <!-- Interactive Visual Labs Launchpad -->
+                    <div class="glass-card rounded-2xl p-5 space-y-4 border-cyan-500/20">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-mono uppercase tracking-wider px-2.5 py-1 rounded-md bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">Interactive Widgets</span>
+                            <i data-lucide="cpu" class="w-5 h-5 text-cyan-400"></i>
+                        </div>
+                        <h4 class="font-bold text-lg text-white">Hands-On Calculus Visualizers</h4>
+                        <p class="text-xs text-gray-300 leading-relaxed">
+                            Don't just memorize formulas. Manipulate sliders to see how parent functions transform and how secant lines converge into derivatives as <span class="math-expr">&Delta;x &rarr; 0</span>.
+                        </p>
+                        <div class="space-y-2.5 pt-1">
+                            <button onclick="openLabWidget('transform')" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-600/30 to-indigo-600/30 hover:from-cyan-500/40 hover:to-indigo-500/40 border border-cyan-500/40 text-left flex items-center justify-between group transition-all">
+                                <div>
+                                    <div class="text-sm font-semibold text-white group-hover:text-cyan-200">1. Function Transformation Lab</div>
+                                    <div class="text-[11px] text-gray-400 font-mono">f(x) = a&middot;g(b(x - h)) + k</div>
+                                </div>
+                                <i data-lucide="arrow-right" class="w-4 h-4 text-cyan-400 group-hover:translate-x-1 transition-transform"></i>
+                            </button>
+
+                            <button onclick="openLabWidget('unitcircle')" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600/30 to-emerald-600/30 hover:from-indigo-500/40 hover:to-emerald-500/40 border border-indigo-500/40 text-left flex items-center justify-between group transition-all">
+                                <div>
+                                    <div class="text-sm font-semibold text-white group-hover:text-indigo-200">2. Unit Circle & Secant-Tangent Lab</div>
+                                    <div class="text-[11px] text-gray-400 font-mono">Trig Projections &amp; lim(&Delta;x&rarr;0)</div>
+                                </div>
+                                <i data-lucide="arrow-right" class="w-4 h-4 text-indigo-400 group-hover:translate-x-1 transition-transform"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Rank Progression Ladder -->
+                    <div class="glass-card rounded-2xl p-5 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-bold text-sm uppercase tracking-wider text-gray-300 flex items-center gap-2">
+                                <i data-lucide="award" class="w-4 h-4 text-amber-400"></i>
+                                Rank Badges &amp; Milestones
+                            </h4>
+                            <span class="text-xs font-mono text-gray-400">150 XP / Level</span>
+                        </div>
+                        <div id="rank-ladder-list" class="space-y-2.5 text-xs">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             VIEW 2: INSTANT-FEEDBACK PRACTICE ARENA
+             ========================================== -->
+        <section id="view-practice" class="hidden space-y-6">
+            <!-- Module Selector Strip -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-900/80 border border-gray-800 p-4 rounded-2xl">
+                <div class="flex items-center gap-3">
+                    <button onclick="switchTab('map')" class="p-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors" title="Back to Map">
+                        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    </button>
+                    <div>
+                        <span id="arena-module-tag" class="text-[11px] font-mono uppercase tracking-wider text-cyan-400 font-semibold">MODULE 1</span>
+                        <h2 id="arena-module-title" class="text-lg sm:text-xl font-bold text-white">Advanced Algebra &amp; Factoring</h2>
+                    </div>
+                </div>
+
+                <!-- Module Switcher Dropdown / Pills -->
+                <div class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0" id="arena-module-pills">
+                    <!-- Rendered dynamically -->
+                </div>
+            </div>
+
+            <!-- Question Progress Dots & Telemetry -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                <!-- Left 2 Cols: Active Question Card -->
+                <div class="lg:col-span-2 glass-card rounded-2xl p-5 sm:p-7 space-y-6 relative overflow-hidden">
+                    <!-- Question Top Header -->
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-4">
+                        <div class="flex items-center gap-2">
+                            <span id="question-number-badge" class="px-2.5 py-1 rounded-lg bg-indigo-500/20 border border-indigo-500/40 font-mono text-xs font-bold text-indigo-300">
+                                Problem 1 of 5
+                            </span>
+                            <span id="question-topic-pill" class="px-2.5 py-1 rounded-lg bg-gray-800 text-gray-300 text-xs font-medium">
+                                Difference of Cubes
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span id="question-xp-badge" class="text-xs font-mono text-amber-300 bg-amber-500/10 border border-amber-500/25 px-2.5 py-1 rounded-lg">
+                                +50 XP
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Question Prompt -->
+                    <div class="space-y-3">
+                        <div id="question-prompt" class="text-base sm:text-lg font-medium text-gray-100 leading-relaxed">
+                            <!-- Question HTML injected here -->
+                        </div>
+                    </div>
+
+                    <!-- Options Grid -->
+                    <div id="question-options-container" class="grid grid-cols-1 gap-3">
+                        <!-- Option Buttons injected here -->
+                    </div>
+
+                    <!-- Action Bar: Hint Button & Next Problem -->
+                    <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-gray-800/80">
+                        <button id="btn-unlock-hint" onclick="revealHint()" class="px-3.5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-medium flex items-center gap-2 transition-all">
+                            <i data-lucide="lightbulb" class="w-4 h-4"></i>
+                            <span>Unlock Concept Hint</span>
+                        </button>
+
+                        <div class="flex items-center gap-2">
+                            <button onclick="prevQuestion()" id="btn-prev-q" class="px-3.5 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-medium flex items-center gap-1.5 transition-all disabled:opacity-40">
+                                <i data-lucide="chevron-left" class="w-4 h-4"></i> Prev
+                            </button>
+                            <button onclick="nextQuestion()" id="btn-next-q" class="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-gray-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-lg shadow-cyan-500/20">
+                                Next Problem <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Collapsible Hint Box -->
+                    <div id="hint-box" class="hidden rounded-xl bg-amber-950/40 border border-amber-500/30 p-4 text-xs sm:text-sm text-amber-200/90 space-y-1">
+                        <div class="font-bold text-amber-300 flex items-center gap-1.5">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i> Strategic Hint:
+                        </div>
+                        <p id="hint-text" class="leading-relaxed"></p>
+                    </div>
+
+                    <!-- Instant Validation & Step-by-Step Rationale Box -->
+                    <div id="rationale-box" class="hidden rounded-2xl p-5 space-y-3 border transition-all">
+                        <div class="flex items-center justify-between">
+                            <div id="rationale-status-title" class="font-bold text-sm sm:text-base flex items-center gap-2"></div>
+                            <span id="rationale-xp-earned" class="font-mono text-xs font-bold px-2.5 py-1 rounded-md"></span>
+                        </div>
+                        <div class="text-xs sm:text-sm text-gray-200 leading-relaxed space-y-2 border-t border-white/10 pt-3">
+                            <div class="font-mono text-xs uppercase tracking-wider text-cyan-300 font-semibold">Step-by-Step Algebraic Rationale:</div>
+                            <div id="rationale-steps" class="space-y-1.5 text-gray-300"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Col: Module Question Navigator & Quick Reference Cheat Sheet -->
+                <div class="space-y-6">
+                    <!-- Question Navigator Matrix -->
+                    <div class="glass-card rounded-2xl p-5 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-bold text-sm text-white flex items-center gap-2">
+                                <i data-lucide="Target" class="w-4 h-4 text-cyan-400"></i>
+                                Module Question Matrix
+                            </h4>
+                            <span id="module-progress-fraction" class="text-xs font-mono text-cyan-400 font-bold">0/5 Completed</span>
+                        </div>
+                        <div id="question-matrix-dots" class="grid grid-cols-5 gap-2">
+                            <!-- 5 Question pills rendered via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Module Formula Cheat-Sheet -->
+                    <div class="glass-card rounded-2xl p-5 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-bold text-sm text-white flex items-center gap-2">
+                                <i data-lucide="file-code-2" class="w-4 h-4 text-indigo-400"></i>
+                                Module Key Identities
+                            </h4>
+                            <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-300">Reference</span>
+                        </div>
+                        <div id="module-cheatsheet-content" class="space-y-2.5 text-xs text-gray-300 font-mono">
+                            <!-- Populated dynamically per module -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             VIEW 3: INTERACTIVE VISUAL LABS (CANVAS)
+             ========================================== -->
+        <section id="view-labs" class="hidden space-y-6">
+            <!-- Lab Sub-Navigation Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-900/80 border border-gray-800 p-4 rounded-2xl">
+                <div>
+                    <span class="text-xs font-mono uppercase tracking-wider text-cyan-400 font-semibold">Interactive HTML5 Canvas Sandbox</span>
+                    <h2 class="text-xl font-bold text-white">Dynamic Calculus &amp; Function Visualizers</h2>
+                </div>
+                <div class="flex items-center gap-2 bg-gray-950 p-1.5 rounded-xl border border-gray-800">
+                    <button id="btn-lab-transform" onclick="switchLabMode('transform')" class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all bg-cyan-500 text-gray-950 shadow">
+                        Lab 1: Function Transformations
+                    </button>
+                    <button id="btn-lab-unitcircle" onclick="switchLabMode('unitcircle')" class="px-3.5 py-2 rounded-lg text-xs font-bold transition-all text-gray-400 hover:text-white">
+                        Lab 2: Unit Circle &amp; Secant Limit
+                    </button>
+                </div>
+            </div>
+
+            <!-- WIDGET 1: FUNCTION TRANSFORMATION LAB -->
+            <div id="lab-widget-transform" class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                <!-- Controls Panel -->
+                <div class="glass-card rounded-2xl p-5 space-y-5">
+                    <div>
+                        <span class="text-[11px] font-mono uppercase text-cyan-400">Module 2 Companion</span>
+                        <h3 class="text-lg font-bold text-white">Transformation Explorer</h3>
+                        <p class="text-xs text-gray-400 mt-1">
+                            Manipulate parameters <span class="math-expr">a, b, h, k</span> to see how they stretch, reflect, and shift the parent function <span class="math-expr">g(x)</span> in real time.
+                        </p>
+                    </div>
+
+                    <!-- Live Equation Readout -->
+                    <div class="bg-gray-950/90 border border-cyan-500/30 rounded-xl p-3.5 text-center">
+                        <div class="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Active Transformed Function</div>
+                        <div id="transform-equation-display" class="font-mono font-bold text-sm sm:text-base text-cyan-300 break-all">
+                            f(x) = 1.0 &middot; (x - 0.0)&sup2; + 0.0
+                        </div>
+                    </div>
+
+                    <!-- Parent Function Selector -->
+                    <div class="space-y-2">
+                        <label class="text-xs font-semibold text-gray-300 uppercase tracking-wider block">Select Parent Function g(x):</label>
+                        <div class="grid grid-cols-5 gap-1.5" id="parent-fn-buttons">
+                            <button onclick="setParentFn('quad')" data-fn="quad" class="parent-fn-btn py-2 rounded-lg font-mono text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/50">x&sup2;</button>
+                            <button onclick="setParentFn('sin')" data-fn="sin" class="parent-fn-btn py-2 rounded-lg font-mono text-xs font-bold bg-gray-800 text-gray-300 border border-gray-700 hover:border-gray-600">sin(x)</button>
+                            <button onclick="setParentFn('exp')" data-fn="exp" class="parent-fn-btn py-2 rounded-lg font-mono text-xs font-bold bg-gray-800 text-gray-300 border border-gray-700 hover:border-gray-600">e&#x02E3;</button>
+                            <button onclick="setParentFn('recip')" data-fn="recip" class="parent-fn-btn py-2 rounded-lg font-mono text-xs font-bold bg-gray-800 text-gray-300 border border-gray-700 hover:border-gray-600">1/x</button>
+                            <button onclick="setParentFn('abs')" data-fn="abs" class="parent-fn-btn py-2 rounded-lg font-mono text-xs font-bold bg-gray-800 text-gray-300 border border-gray-700 hover:border-gray-600">|x|</button>
+                        </div>
+                    </div>
+
+                    <!-- Parameter Sliders a, b, h, k -->
+                    <div class="space-y-4 pt-2 border-t border-gray-800">
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-gray-300 font-medium">Vertical Stretch / Reflect (<strong class="font-mono text-cyan-300">a</strong>)</span>
+                                <span id="val-slider-a" class="font-mono font-bold text-cyan-400">1.0</span>
+                            </div>
+                            <input type="range" id="slider-a" min="-3" max="3" step="0.1" value="1" oninput="updateTransformLab()">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-gray-300 font-medium">Horizontal Scale / Period (<strong class="font-mono text-indigo-300">b</strong>)</span>
+                                <span id="val-slider-b" class="font-mono font-bold text-indigo-400">1.0</span>
+                            </div>
+                            <input type="range" id="slider-b" min="0.2" max="3" step="0.1" value="1" oninput="updateTransformLab()">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-gray-300 font-medium">Horizontal Shift (<strong class="font-mono text-emerald-300">h</strong>)</span>
+                                <span id="val-slider-h" class="font-mono font-bold text-emerald-400">0.0</span>
+                            </div>
+                            <input type="range" id="slider-h" min="-5" max="5" step="0.2" value="0" oninput="updateTransformLab()">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-gray-300 font-medium">Vertical Shift (<strong class="font-mono text-amber-300">k</strong>)</span>
+                                <span id="val-slider-k" class="font-mono font-bold text-amber-400">0.0</span>
+                            </div>
+                            <input type="range" id="slider-k" min="-5" max="5" step="0.2" value="0" oninput="updateTransformLab()">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-2">
+                        <button onclick="resetTransformLab()" class="w-full py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-gray-200 transition-colors flex items-center justify-center gap-1.5">
+                            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Reset to Parent Function
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Interactive Coordinate Grid Canvas -->
+                <div class="lg:col-span-2 glass-card rounded-2xl p-4 sm:p-6 flex flex-col gap-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-4 text-xs">
+                            <span class="flex items-center gap-1.5 text-gray-400">
+                                <span class="w-3 h-0.5 bg-gray-500 inline-block border-b border-dashed"></span> Parent g(x)
+                            </span>
+                            <span class="flex items-center gap-1.5 text-cyan-300 font-medium">
+                                <span class="w-3 h-1 bg-cyan-400 rounded-full inline-block"></span> Transformed f(x)
+                            </span>
+                            <span class="flex items-center gap-1.5 text-amber-300 font-medium">
+                                <span class="w-2.5 h-2.5 bg-amber-400 rounded-full inline-block"></span> Anchor (h, k)
+                            </span>
+                        </div>
+                        <span id="transform-behavior-note" class="text-xs font-mono text-emerald-400">Standard Orientation</span>
+                    </div>
+
+                    <div class="relative w-full h-[360px] sm:h-[440px] bg-gray-950 rounded-xl border border-gray-800 overflow-hidden">
+                        <canvas id="canvas-transform" class="w-full h-full block"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WIDGET 2: UNIT CIRCLE & SECANT-TO-TANGENT LIMIT VISUALIZER -->
+            <div id="lab-widget-unitcircle" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                <!-- Controls Panel -->
+                <div class="glass-card rounded-2xl p-5 space-y-5">
+                    <div>
+                        <span class="text-[11px] font-mono uppercase text-indigo-400">Modules 3 &amp; 5 Companion</span>
+                        <h3 class="text-lg font-bold text-white">Dual Mode: Trig &amp; Limits</h3>
+                        <p class="text-xs text-gray-400 mt-1">
+                            Toggle between exploring exact Unit Circle radian projections OR watching a Secant Line converge into a Tangent Derivative as <span class="math-expr">&Delta;x &rarr; 0</span>.
+                        </p>
+                    </div>
+
+                    <!-- Mode Switcher inside Widget 2 -->
+                    <div class="grid grid-cols-2 gap-2 bg-gray-950 p-1.5 rounded-xl border border-gray-800">
+                        <button id="submode-btn-trig" onclick="setWidget2Submode('trig')" class="py-2 px-3 rounded-lg text-xs font-bold bg-indigo-500 text-white transition-all">
+                            Unit Circle (&theta;)
+                        </button>
+                        <button id="submode-btn-secant" onclick="setWidget2Submode('secant')" class="py-2 px-3 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition-all">
+                            Secant &rarr; Tangent (&Delta;x)
+                        </button>
+                    </div>
+
+                    <!-- Controls for Submode A: Unit Circle -->
+                    <div id="controls-submode-trig" class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-gray-300 font-medium">Angle <strong class="font-mono text-indigo-300">&theta;</strong> (Degrees / Radians)</span>
+                                <span id="val-trig-angle" class="font-mono font-bold text-cyan-300">45&deg; (&pi;/4)</span>
+                            </div>
+                            <input type="range" id="slider-trig-angle" min="0" max="360" step="15" value="45" oninput="updateWidget2Canvas()">
+                        </div>
+
+                        <!-- Snap to Special Angles -->
+                        <div class="space-y-1.5">
+                            <span class="text-[11px] font-mono uppercase text-gray-400">Snap to Special Unit Circle Angles:</span>
+                            <div class="grid grid-cols-4 gap-1.5">
+                                <button onclick="setTrigAngle(30)" class="py-1.5 rounded bg-gray-800 hover:bg-gray-700 font-mono text-xs text-cyan-300">&pi;/6</button>
+                                <button onclick="setTrigAngle(45)" class="py-1.5 rounded bg-gray-800 hover:bg-gray-700 font-mono text-xs text-cyan-300">&pi;/4</button>
+                                <button onclick="setTrigAngle(60)" class="py-1.5 rounded bg-gray-800 hover:bg-gray-700 font-mono text-xs text-cyan-300">&pi;/3</button>
+                                <button onclick="setTrigAngle(90)" class="py-1.5 rounded bg-gray-800 hover:bg-gray-700 font-mono text-xs text-cyan-300">&pi;/2</button>
+                                <button onclick="setTrigAngle(120)" class="py-1.5 rounded bg-gray-800 hover:bg-gray-700 font-mono text-xs text-indigo-300">2&pi;/3</button>
+                                <button onclick="setTrigAngle(135)" class="py-1.5 rounded bg-gray-800 hover:bg-gray-700 font-mono text-xs text-indigo-300">3&pi;/4</button>
+                                <button onclick="setTrigAngle(150)" class="py-1.5 rounded bg-gray-800 hover:bg-gray-700 font-mono text-xs text-indigo-300">5&pi;/6</button>
+                                <button onclick="setTrigAngle(180)" class="py-1.5 rounded bg-gray-800 hover:bg-gray-700 font-mono text-xs text-indigo-300">&pi;</button>
+                            </div>
+                        </div>
+
+                        <!-- Live Telemetry Readout -->
+                        <div class="bg-gray-950/90 border border-gray-800 rounded-xl p-3.5 space-y-2 font-mono text-xs">
+                            <div class="flex justify-between">
+                                <span class="text-emerald-400">cos(&theta;) [x-coord]:</span>
+                                <span id="readout-cos" class="font-bold text-white">&radic;2 / 2 &approx; 0.707</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-rose-400">sin(&theta;) [y-coord]:</span>
+                                <span id="readout-sin" class="font-bold text-white">&radic;2 / 2 &approx; 0.707</span>
+                            </div>
+                            <div class="flex justify-between border-t border-gray-800 pt-1.5">
+                                <span class="text-amber-400">tan(&theta;) [sin/cos]:</span>
+                                <span id="readout-tan" class="font-bold text-white">1.000</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Controls for Submode B: Secant-to-Tangent Limit Visualizer -->
+                    <div id="controls-submode-secant" class="hidden space-y-4">
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-gray-300 font-medium">Anchor Point <strong class="font-mono text-cyan-300">x&#8320;</strong> on f(x) = 0.25x&sup2;</span>
+                                <span id="val-secant-x0" class="font-mono font-bold text-cyan-400">1.5</span>
+                            </div>
+                            <input type="range" id="slider-secant-x0" min="-2.5" max="2.5" step="0.25" value="1.5" oninput="updateWidget2Canvas()">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-gray-300 font-medium">Step Size <strong class="font-mono text-amber-300">&Delta;x (h)</strong> &rarr; 0</span>
+                                <span id="val-secant-dx" class="font-mono font-bold text-amber-400">2.00</span>
+                            </div>
+                            <input type="range" id="slider-secant-dx" min="0.01" max="3.0" step="0.05" value="2.0" oninput="updateWidget2Canvas()">
+                        </div>
+
+                        <div class="bg-gray-950/90 border border-gray-800 rounded-xl p-3.5 space-y-2 font-mono text-xs">
+                            <div class="flex justify-between">
+                                <span class="text-amber-400">Secant Slope (&Delta;y/&Delta;x):</span>
+                                <span id="readout-secant-slope" class="font-bold text-white">1.250</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-emerald-400">True Tangent f'(x&#8320;):</span>
+                                <span id="readout-tangent-slope" class="font-bold text-white">0.750</span>
+                            </div>
+                            <div class="flex justify-between border-t border-gray-800 pt-1.5">
+                                <span class="text-cyan-400">Approximation Error:</span>
+                                <span id="readout-slope-error" class="font-bold text-white">0.500</span>
+                            </div>
+                        </div>
+
+                        <button onclick="animateLimitToZero()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-cyan-500 text-gray-950 font-bold text-xs shadow-lg hover:opacity-95 transition-opacity">
+                            Animate Limit &Delta;x &rarr; 0
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Interactive Canvas for Widget 2 -->
+                <div class="lg:col-span-2 glass-card rounded-2xl p-4 sm:p-6 flex flex-col gap-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div id="widget2-legend" class="flex items-center gap-4">
+                            <span class="flex items-center gap-1.5 text-emerald-400 font-medium"><span class="w-3 h-1 bg-emerald-400 inline-block"></span> cos(&theta;)</span>
+                            <span class="flex items-center gap-1.5 text-rose-400 font-medium"><span class="w-3 h-1 bg-rose-400 inline-block"></span> sin(&theta;)</span>
+                            <span class="flex items-center gap-1.5 text-cyan-300 font-medium"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block"></span> Point P(cos &theta;, sin &theta;)</span>
+                        </div>
+                        <span class="font-mono text-gray-400">sin&sup2;(&theta;) + cos&sup2;(&theta;) = 1</span>
+                    </div>
+
+                    <div class="relative w-full h-[360px] sm:h-[440px] bg-gray-950 rounded-xl border border-gray-800 overflow-hidden">
+                        <canvas id="canvas-widget2" class="w-full h-full block"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             VIEW 4: CURATED STUDY & TUTOR RESOURCE HUB
+             ========================================== -->
+        <section id="view-resources" class="hidden space-y-6">
+            <!-- Header & Topic Filters -->
+            <div class="glass-card rounded-2xl p-6 space-y-4">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <span class="text-xs font-mono uppercase tracking-wider text-cyan-400 font-semibold">Curated Learning Directory</span>
+                        <h2 class="text-2xl font-bold text-white">Top-Tier Calculus &amp; Pre-Calc Educators</h2>
+                        <p class="text-sm text-gray-300 mt-1">
+                            Direct links and targeted study strategies from the gold-standard instructors trusted by engineering and mathematics students worldwide.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Filter Buttons by Module -->
+                <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-800" id="resource-filter-bar">
+                    <button onclick="filterResources('all')" data-filter="all" class="res-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-500 text-gray-950 transition-all">All Topics</button>
+                    <button onclick="filterResources('mod1')" data-filter="mod1" class="res-filter-btn px-3 py-1.5 rounded-xl text-xs font-medium bg-gray-900 text-gray-300 border border-gray-800 hover:border-gray-700">Mod 1: Algebra</button>
+                    <button onclick="filterResources('mod2')" data-filter="mod2" class="res-filter-btn px-3 py-1.5 rounded-xl text-xs font-medium bg-gray-900 text-gray-300 border border-gray-800 hover:border-gray-700">Mod 2: Functions</button>
+                    <button onclick="filterResources('mod3')" data-filter="mod3" class="res-filter-btn px-3 py-1.5 rounded-xl text-xs font-medium bg-gray-900 text-gray-300 border border-gray-800 hover:border-gray-700">Mod 3: Trigonometry</button>
+                    <button onclick="filterResources('mod4')" data-filter="mod4" class="res-filter-btn px-3 py-1.5 rounded-xl text-xs font-medium bg-gray-900 text-gray-300 border border-gray-800 hover:border-gray-700">Mod 4: Logs &amp; Exp</button>
+                    <button onclick="filterResources('mod5')" data-filter="mod5" class="res-filter-btn px-3 py-1.5 rounded-xl text-xs font-medium bg-gray-900 text-gray-300 border border-gray-800 hover:border-gray-700">Mod 5: Limits</button>
+                </div>
+            </div>
+
+            <!-- Educator Cards Grid -->
+            <div id="resources-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Populated dynamically via JS -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 glass-panel border-t border-gray-800 px-2 py-2 flex items-center justify-around">
+        <button onclick="switchTab('map')" id="nav-mobile-map" class="flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-cyan-400">
+            <i data-lucide="map" class="w-5 h-5"></i>
+            <span class="text-[11px] font-semibold">Skill Path</span>
+        </button>
+        <button onclick="switchTab('practice')" id="nav-mobile-practice" class="flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-gray-400">
+            <i data-lucide="zap" class="w-5 h-5"></i>
+            <span class="text-[11px] font-semibold">Practice</span>
+        </button>
+        <button onclick="switchTab('labs')" id="nav-mobile-labs" class="flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-gray-400">
+            <i data-lucide="sliders" class="w-5 h-5"></i>
+            <span class="text-[11px] font-semibold">Visual Labs</span>
+        </button>
+        <button onclick="switchTab('resources')" id="nav-mobile-resources" class="flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-gray-400">
+            <i data-lucide="book-open" class="w-5 h-5"></i>
+            <span class="text-[11px] font-semibold">Tutors</span>
+        </button>
+    </nav>
+
+    <!-- Custom Reset Confirmation Modal (Never using alert/confirm) -->
+    <div id="reset-modal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="glass-card max-w-md w-full rounded-2xl p-6 space-y-4 border border-rose-500/30">
+            <div class="flex items-center gap-3 text-rose-400">
+                <div class="p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30">
+                    <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-lg font-bold text-white">Reset All Progress?</h3>
+            </div>
+            <p class="text-sm text-gray-300 leading-relaxed">
+                This will clear your current XP, rank badge, streak records, and solved problem history from local storage. You can start fresh anytime!
+            </p>
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button onclick="closeResetModal()" class="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-gray-300">
+                    Cancel
+                </button>
+                <button onclick="confirmResetProgress()" class="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-400 text-xs font-bold text-white shadow-lg shadow-rose-500/25">
+                    Yes, Reset Everything
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         APPLICATION JAVASCRIPT & DATA ENGINE
+         ========================================== -->
+    <script>
+        /**************************************************************
+         * 1. WEB AUDIO API SYNTHESIZER (No External Assets Required)
+         **************************************************************/
+        let audioCtx = null;
+        function playTone(type) {
+            if (!appState.soundEnabled) return;
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const now = audioCtx.currentTime;
+                if (type === 'correct') {
+                    // Ascending major triad chime
+                    [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.065);
+                        gain.gain.setValueAtTime(0.12, now + idx * 0.065);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.065 + 0.28);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now + idx * 0.065);
+                        osc.stop(now + idx * 0.065 + 0.3);
+                    });
+                } else if (type === 'wrong') {
+                    // Low sawtooth buzz
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(170, now);
+                    osc.frequency.linearRampToValueAtTime(125, now + 0.25);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else if (type === 'click') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(660, now);
+                    gain.gain.setValueAtTime(0.05, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.07);
+                }
+            } catch (e) {
+                // Ignore audio errors if blocked by browser autoplay policy
+            }
+        }
+
+        /**************************************************************
+         * 2. CURRICULUM MODULES & 25 AUTHENTIC CALCULUS PREP PROBLEMS
+         **************************************************************/
+        const RANKS = [
+            { level: 1, title: "Algebra Initiate", minXP: 0, badgeColor: "text-gray-300" },
+            { level: 2, title: "Function Explorer", minXP: 150, badgeColor: "text-cyan-300" },
+            { level: 3, title: "Radian Tactician", minXP: 300, badgeColor: "text-indigo-300" },
+            { level: 4, title: "Logarithm Alchemist", minXP: 500, badgeColor: "text-emerald-300" },
+            { level: 5, title: "Limit Vanguard", minXP: 750, badgeColor: "text-amber-300" },
+            { level: 6, title: "Calculus Sovereign", minXP: 1050, badgeColor: "text-rose-400" }
+        ];
+
+        const MODULES = [
+            {
+                id: 'mod1',
+                number: 1,
+                title: "Advanced Algebra & Factoring",
+                subtitle: "Difference of cubes, rationalizing conjugates, and complex fractions used daily in derivatives.",
+                accent: "cyan",
+                icon: "binary",
+                cheatsheet: [
+                    "a³ - b³ = (a - b)(a² + ab + b²)",
+                    "a³ + b³ = (a + b)(a² - ab + b²)",
+                    "(√a - √b)(√a + √b) = a - b",
+                    "x⁻ⁿ = 1 / xⁿ ,  x^(a/b) = ᵇ√(xᵃ)"
+                ],
+                questions: [
+                    {
+                        id: "m1q1",
+                        topic: "Difference of Cubes",
+                        xp: 50,
+                        prompt: `Simplify the algebraic expression <span class="math-expr">(x³ - 27) / (x - 3)</span> for <span class="math-expr">x &ne; 3</span>, a classic step when resolving <span class="math-expr">0/0</span> limits.`,
+                        options: [
+                            "x² + 3x + 9",
+                            "x² - 3x + 9",
+                            "x² + 9",
+                            "(x - 3)²"
+                        ],
+                        correct: 0,
+                        hint: "Recall the Difference of Cubes identity: a³ - b³ = (a - b)(a² + ab + b²) with a = x and b = 3.",
+                        rationale: [
+                            "1. Identify that 27 = 3³, so the numerator is a difference of cubes: x³ - 3³.",
+                            "2. Apply the SOAP factoring formula: x³ - 3³ = (x - 3)(x² + 3x + 9).",
+                            "3. Cancel the common factor (x - 3) from numerator and denominator to obtain x² + 3x + 9."
+                        ]
+                    },
+                    {
+                        id: "m1q2",
+                        topic: "Rationalizing Conjugates",
+                        xp: 50,
+                        prompt: `Rationalize the numerator of <span class="math-expr">(&radic;(x + 4) - 2) / x</span> and simplify completely (assume <span class="math-expr">x &ne; 0</span>).`,
+                        options: [
+                            "1 / (√(x + 4) + 2)",
+                            "1 / (√(x + 4) - 2)",
+                            "x / (√(x + 4) + 2)",
+                            "1 / (x + 2)"
+                        ],
+                        correct: 0,
+                        hint: "Multiply both the numerator and denominator by the conjugate of the numerator: (√(x + 4) + 2).",
+                        rationale: [
+                            "1. Multiply top and bottom by the conjugate (√(x + 4) + 2).",
+                            "2. Numerator becomes (√(x + 4))² - 2² = (x + 4) - 4 = x.",
+                            "3. Expression is now x / [x(√(x + 4) + 2)]. Cancel x to leave 1 / (√(x + 4) + 2)."
+                        ]
+                    },
+                    {
+                        id: "m1q3",
+                        topic: "Complex Fractions",
+                        xp: 50,
+                        prompt: `Simplify the compound fraction <span class="math-expr">[ (1 / (x + h)) - (1 / x) ] / h</span>, which defines the derivative of <span class="math-expr">f(x) = 1/x</span>.`,
+                        options: [
+                            "-1 / [ x(x + h) ]",
+                            "1 / [ x(x + h) ]",
+                            "-h / [ x²(x + h) ]",
+                            "-1 / x²"
+                        ],
+                        correct: 0,
+                        hint: "Find a common denominator for the two fractions in the numerator: x(x + h).",
+                        rationale: [
+                            "1. Combine the top fractions over the common denominator x(x + h): [x - (x + h)] / [x(x + h)].",
+                            "2. Distribute the negative sign in the numerator: (x - x - h) = -h.",
+                            "3. Divide by h: [-h / (x(x + h))] · (1/h) = -1 / [x(x + h)]."
+                        ]
+                    },
+                    {
+                        id: "m1q4",
+                        topic: "Fractional Exponents",
+                        xp: 50,
+                        prompt: `Factor and simplify the expression <span class="math-expr">3x^(1/2) - 9x^(-1/2)</span> into a single fraction with positive exponents.`,
+                        options: [
+                            "3(x - 3) / √x",
+                            "3(x² - 3) / √x",
+                            "3 / (x - 3)",
+                            "-6 / √x"
+                        ],
+                        correct: 0,
+                        hint: "Factor out the smallest power of x, which is 3x^(-1/2), or rewrite x^(-1/2) as 1/√x.",
+                        rationale: [
+                            "1. Rewrite with radicals: 3√x - 9/√x.",
+                            "2. Multiply the first term by √x / √x to get a common denominator: (3x - 9) / √x.",
+                            "3. Factor out 3 in the numerator: 3(x - 3) / √x."
+                        ]
+                    },
+                    {
+                        id: "m1q5",
+                        topic: "Quadratic Form Factoring",
+                        xp: 60,
+                        prompt: `Find all real zeros of the polynomial <span class="math-expr">P(x) = x⁴ - 5x² + 4</span>.`,
+                        options: [
+                            "x = -2, -1, 1, 2",
+                            "x = 1, 4",
+                            "x = -4, -1, 1, 4",
+                            "x = -2, 2"
+                        ],
+                        correct: 0,
+                        hint: "Treat x⁴ - 5x² + 4 as a quadratic in u = x²: u² - 5u + 4 = 0.",
+                        rationale: [
+                            "1. Factor in terms of x²: (x² - 4)(x² - 1) = 0.",
+                            "2. Factor each difference of squares: (x - 2)(x + 2)(x - 1)(x + 1) = 0.",
+                            "3. Set each factor to zero: x = -2, -1, 1, 2."
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'mod2',
+                number: 2,
+                title: "Function Behavior & Transformations",
+                subtitle: "Domains, asymptotes, shifting/stretching graphs, composite functions, and the difference quotient.",
+                accent: "indigo",
+                icon: "activity",
+                cheatsheet: [
+                    "f(x) = a·g(b(x - h)) + k",
+                    "Diff Quotient: [f(x+h) - f(x)] / h",
+                    "Even: f(-x) = f(x) | Odd: f(-x) = -f(x)",
+                    "Domain of √u(x): u(x) ≥ 0"
+                ],
+                questions: [
+                    {
+                        id: "m2q1",
+                        topic: "Domain Restrictions",
+                        xp: 50,
+                        prompt: `What is the maximal real domain of the function <span class="math-expr">f(x) = &radic;(x + 2) / (x - 3)</span>?`,
+                        options: [
+                            "[-2, 3) ∪ (3, ∞)",
+                            "(-2, 3) ∪ (3, ∞)",
+                            "[-2, ∞)",
+                            "(-∞, 3) ∪ (3, ∞)"
+                        ],
+                        correct: 0,
+                        hint: "The expression inside the even root must be ≥ 0, AND the denominator cannot equal 0.",
+                        rationale: [
+                            "1. Radical condition: x + 2 ≥ 0  ⇒  x ≥ -2.",
+                            "2. Denominator condition: x - 3 ≠ 0  ⇒  x ≠ 3.",
+                            "3. Combining both in interval notation gives [-2, 3) ∪ (3, ∞)."
+                        ]
+                    },
+                    {
+                        id: "m2q2",
+                        topic: "Difference Quotient",
+                        xp: 60,
+                        prompt: `Evaluate and simplify the difference quotient <span class="math-expr">[f(x + h) - f(x)] / h</span> for <span class="math-expr">f(x) = x² - 4x</span>.`,
+                        options: [
+                            "2x + h - 4",
+                            "2x - 4",
+                            "2x + 2h - 4",
+                            "x² + 2xh + h² - 4"
+                        ],
+                        correct: 0,
+                        hint: "Carefully expand f(x + h) = (x + h)² - 4(x + h), then subtract (x² - 4x).",
+                        rationale: [
+                            "1. Compute f(x + h) = x² + 2xh + h² - 4x - 4h.",
+                            "2. Subtract f(x): (x² + 2xh + h² - 4x - 4h) - (x² - 4x) = 2xh + h² - 4h.",
+                            "3. Divide every remaining term by h: (2xh + h² - 4h) / h = 2x + h - 4."
+                        ]
+                    },
+                    {
+                        id: "m2q3",
+                        topic: "Graph Transformations",
+                        xp: 50,
+                        prompt: `Starting with the parent graph <span class="math-expr">g(x) = &radic;x</span>, what sequence of transformations produces <span class="math-expr">f(x) = -2&radic;(x - 3) + 5</span>?`,
+                        options: [
+                            "Shift right 3, vertical stretch by 2, reflect across x-axis, shift up 5",
+                            "Shift left 3, vertical stretch by 2, reflect across y-axis, shift up 5",
+                            "Shift right 3, shift up 5, reflect across y-axis",
+                            "Shift left 3, vertical shrink by 1/2, shift down 5"
+                        ],
+                        correct: 0,
+                        hint: "Check our Visual Lab! (x - 3) shifts horizontally right 3; multiplying outside by -2 stretches vertically and reflects over the x-axis.",
+                        rationale: [
+                            "1. Inside adjustment (x - 3) shifts the graph 3 units right.",
+                            "2. Coefficient |a| = 2 stretches vertically by a factor of 2, and the negative sign reflects across the x-axis.",
+                            "3. Constant k = +5 shifts the entire curve up 5 units."
+                        ]
+                    },
+                    {
+                        id: "m2q4",
+                        topic: "Function Composition",
+                        xp: 50,
+                        prompt: `In Calculus, the Chain Rule differentiates composite functions. If <span class="math-expr">f(x) = x / (x + 1)</span> and <span class="math-expr">g(x) = 2/x</span>, find simplified <span class="math-expr">f(g(x))</span>.`,
+                        options: [
+                            "2 / (2 + x)",
+                            "2 / (x + 1)",
+                            "x / (2x + 1)",
+                            "(2 + x) / 2"
+                        ],
+                        correct: 0,
+                        hint: "Replace every x in f(x) with (2/x), then multiply top and bottom by x to clear the mini-fractions.",
+                        rationale: [
+                            "1. Substitute g(x) into f: f(g(x)) = (2/x) / ( (2/x) + 1 ).",
+                            "2. Multiply numerator and denominator by x: [x · (2/x)] / [x · (2/x + 1)].",
+                            "3. Simplify to obtain 2 / (2 + x)."
+                        ]
+                    },
+                    {
+                        id: "m2q5",
+                        topic: "Horizontal Asymptotes",
+                        xp: 50,
+                        prompt: `Find the horizontal asymptote of the rational function <span class="math-expr">R(x) = (6x² - x + 1) / (2x² + 5)</span> as <span class="math-expr">x &rarr; &plusmn;&infin;</span>.`,
+                        options: [
+                            "y = 3",
+                            "y = 0",
+                            "y = 6/5",
+                            "No horizontal asymptote"
+                        ],
+                        correct: 0,
+                        hint: "Compare the degrees of the numerator and denominator polynomials.",
+                        rationale: [
+                            "1. Both numerator and denominator have degree 2.",
+                            "2. When degrees are equal, the horizontal asymptote is the ratio of leading coefficients.",
+                            "3. y = 6 / 2 = 3."
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'mod3',
+                number: 3,
+                title: "Trigonometric Identities & Unit Circle",
+                subtitle: "Exact radian values, Pythagorean identities, and double-angle formulas essential for trig integrals.",
+                accent: "emerald",
+                icon: "compass",
+                cheatsheet: [
+                    "sin²θ + cos²θ = 1 | 1 + tan²θ = sec²θ",
+                    "sin(2θ) = 2 sinθ cosθ",
+                    "cos(2θ) = cos²θ - sin²θ = 1 - 2sin²θ",
+                    "π rad = 180° | π/6 = 30°, π/3 = 60°"
+                ],
+                questions: [
+                    {
+                        id: "m3q1",
+                        topic: "Exact Unit Circle Values",
+                        xp: 50,
+                        prompt: `Without a calculator, determine the exact value of <span class="math-expr">cos(5&pi;/6) + sin(7&pi;/6)</span>.`,
+                        options: [
+                            "-(√3 + 1) / 2",
+                            "(√3 - 1) / 2",
+                            "-√3 / 2",
+                            "0"
+                        ],
+                        correct: 0,
+                        hint: "5π/6 is in Quadrant II (reference angle π/6, where cos is negative) and 7π/6 is in Quadrant III (where sin is negative).",
+                        rationale: [
+                            "1. At θ = 5π/6 (150°), cos(5π/6) = -√3 / 2.",
+                            "2. At θ = 7π/6 (210°), sin(7π/6) = -1 / 2.",
+                            "3. Sum: (-√3 / 2) + (-1 / 2) = -(√3 + 1) / 2."
+                        ]
+                    },
+                    {
+                        id: "m3q2",
+                        topic: "Pythagorean Identities",
+                        xp: 50,
+                        prompt: `Simplify the trigonometric expression <span class="math-expr">(sec²(&theta;) - 1) / sec²(&theta;)</span> completely.`,
+                        options: [
+                            "sin²(θ)",
+                            "cos²(θ)",
+                            "tan²(θ)",
+                            "1"
+                        ],
+                        correct: 0,
+                        hint: "Use the Pythagorean identity 1 + tan²(θ) = sec²(θ) in the numerator, or split the fraction.",
+                        rationale: [
+                            "1. Since 1 + tan²(θ) = sec²(θ), the numerator sec²(θ) - 1 equals tan²(θ).",
+                            "2. Rewrite in terms of sin and cos: tan²(θ) / sec²(θ) = [sin²(θ)/cos²(θ)] / [1/cos²(θ)].",
+                            "3. Cancel 1/cos²(θ) to obtain sin²(θ)."
+                        ]
+                    },
+                    {
+                        id: "m3q3",
+                        topic: "Double-Angle Identity",
+                        xp: 60,
+                        prompt: `Which expression is identically equal to <span class="math-expr">sin(2x) / (1 + cos(2x))</span>?`,
+                        options: [
+                            "tan(x)",
+                            "cot(x)",
+                            "sin(x)",
+                            "2 tan(x)"
+                        ],
+                        correct: 0,
+                        hint: "Replace sin(2x) with 2 sin(x)cos(x) and replace 1 + cos(2x) using cos(2x) = 2cos²(x) - 1.",
+                        rationale: [
+                            "1. Numerator identity: sin(2x) = 2 sin(x)cos(x).",
+                            "2. Denominator identity: 1 + cos(2x) = 1 + (2cos²(x) - 1) = 2cos²(x).",
+                            "3. Divide: [2 sin(x)cos(x)] / [2cos²(x)] = sin(x) / cos(x) = tan(x)."
+                        ]
+                    },
+                    {
+                        id: "m3q4",
+                        topic: "Solving Trig Equations",
+                        xp: 60,
+                        prompt: `Find all solutions to <span class="math-expr">2 cos²(x) - cos(x) = 0</span> on the interval <span class="math-expr">[0, &pi;]</span>.`,
+                        options: [
+                            "x = π/3, π/2",
+                            "x = 0, π/3",
+                            "x = π/6, π/2",
+                            "x = π/3, 2π/3"
+                        ],
+                        correct: 0,
+                        hint: "Factor out cos(x) first: cos(x)(2 cos(x) - 1) = 0. Never divide by cos(x) or you'll lose roots!",
+                        rationale: [
+                            "1. Factor: cos(x)(2 cos(x) - 1) = 0.",
+                            "2. Case 1: cos(x) = 0  ⇒  x = π/2 on [0, π].",
+                            "3. Case 2: cos(x) = 1/2  ⇒  x = π/3 on [0, π]."
+                        ]
+                    },
+                    {
+                        id: "m3q5",
+                        topic: "Right Triangle Inverse Trig",
+                        xp: 60,
+                        prompt: `In Calculus trigonometric substitution, you often simplify expressions like <span class="math-expr">cos(arctan(x))</span>. Which algebraic expression is equivalent?`,
+                        options: [
+                            "1 / √(1 + x²)",
+                            "x / √(1 + x²)",
+                            "√(1 - x²)",
+                            "1 / (1 + x²)"
+                        ],
+                        correct: 0,
+                        hint: "Draw a right triangle with angle θ = arctan(x), so opposite = x and adjacent = 1. Find the hypotenuse!",
+                        rationale: [
+                            "1. Let θ = arctan(x), meaning tan(θ) = x / 1 (Opposite = x, Adjacent = 1).",
+                            "2. By Pythagorean theorem, Hypotenuse = √(1² + x²) = √(1 + x²).",
+                            "3. Therefore, cos(θ) = Adjacent / Hypotenuse = 1 / √(1 + x²)."
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'mod4',
+                number: 4,
+                title: "Exponents & Logarithms",
+                subtitle: "Logarithmic expansion laws (crucial for logarithmic differentiation), base e, and exponential growth.",
+                accent: "amber",
+                icon: "trending-up",
+                cheatsheet: [
+                    "ln(AB) = ln(A) + ln(B)",
+                    "ln(A/B) = ln(A) - ln(B)",
+                    "ln(Aᵖ) = p·ln(A)",
+                    "ln(eˣ) = x  |  e^(ln x) = x (x > 0)"
+                ],
+                questions: [
+                    {
+                        id: "m4q1",
+                        topic: "Logarithmic Expansion",
+                        xp: 50,
+                        prompt: `Before differentiating <span class="math-expr">y = ln[ (x² &middot; &radic;(x + 1)) / e^(3x) ]</span>, expand it completely using logarithm laws.`,
+                        options: [
+                            "2 ln(x) + (1/2) ln(x + 1) - 3x",
+                            "2 ln(x) · (1/2) ln(x + 1) - 3x",
+                            "ln(2x) + (1/2) ln(x + 1) - e^(3x)",
+                            "2 ln(x) + 2 ln(x + 1) - 3x"
+                        ],
+                        correct: 0,
+                        hint: "Use ln(A·B / C) = ln(A) + ln(B) - ln(C), then bring exponents down in front.",
+                        rationale: [
+                            "1. Separate products and quotients: ln(x²) + ln((x + 1)^(1/2)) - ln(e^(3x)).",
+                            "2. Apply power rule ln(uᵖ) = p ln(u): 2 ln(x) + (1/2) ln(x + 1) - 3x ln(e).",
+                            "3. Since ln(e) = 1, this simplifies to 2 ln(x) + (1/2) ln(x + 1) - 3x."
+                        ]
+                    },
+                    {
+                        id: "m4q2",
+                        topic: "Inverse Properties of e & ln",
+                        xp: 50,
+                        prompt: `Simplify the expression <span class="math-expr">e^(2 ln(x) - ln(y))</span> for <span class="math-expr">x, y &gt; 0</span>.`,
+                        options: [
+                            "x² / y",
+                            "2x - y",
+                            "x² - y",
+                            "2x / y"
+                        ],
+                        correct: 0,
+                        hint: "Condense the exponent into a single natural logarithm ln(...) before canceling e^(ln(...)).",
+                        rationale: [
+                            "1. Move coefficient into power: 2 ln(x) = ln(x²).",
+                            "2. Condense subtraction into division: ln(x²) - ln(y) = ln(x² / y).",
+                            "3. Apply inverse property e^(ln u) = u to get x² / y."
+                        ]
+                    },
+                    {
+                        id: "m4q3",
+                        topic: "Exponential Equations",
+                        xp: 60,
+                        prompt: `Find all real solutions to <span class="math-expr">e^(2x) - 4e^x + 3 = 0</span>.`,
+                        options: [
+                            "x = 0 and x = ln(3)",
+                            "x = 1 and x = 3",
+                            "x = ln(3) only",
+                            "x = 0 and x = e³"
+                        ],
+                        correct: 0,
+                        hint: "Notice that e^(2x) = (e^x)². Factor this like u² - 4u + 3 = 0 where u = e^x.",
+                        rationale: [
+                            "1. Factor in terms of e^x: (e^x - 1)(e^x - 3) = 0.",
+                            "2. Set first factor to zero: e^x = 1  ⇒  x = ln(1) = 0.",
+                            "3. Set second factor to zero: e^x = 3  ⇒  x = ln(3)."
+                        ]
+                    },
+                    {
+                        id: "m4q4",
+                        topic: "Logarithmic Equations",
+                        xp: 60,
+                        prompt: `Solve <span class="math-expr">ln(x) + ln(x - 2) = ln(3)</span> and check for extraneous domain solutions.`,
+                        options: [
+                            "x = 3 only",
+                            "x = 3 and x = -1",
+                            "x = 5/2",
+                            "No real solution"
+                        ],
+                        correct: 0,
+                        hint: "Combine the left side into ln(x(x - 2)) = ln(3), solve the quadratic, and remember ln(u) requires u > 0.",
+                        rationale: [
+                            "1. Condense: ln(x² - 2x) = ln(3)  ⇒  x² - 2x - 3 = 0.",
+                            "2. Factor: (x - 3)(x + 1) = 0, giving candidates x = 3 and x = -1.",
+                            "3. Reject x = -1 because ln(-1) is undefined in the reals. Only x = 3 is valid."
+                        ]
+                    },
+                    {
+                        id: "m4q5",
+                        topic: "Factoring Critical Point Expressions",
+                        xp: 60,
+                        prompt: `When finding critical points in Calculus using the Product Rule, you will often solve <span class="math-expr">x²e^x + 2xe^x = 0</span>. What are all solutions?`,
+                        options: [
+                            "x = 0 and x = -2",
+                            "x = -2 only",
+                            "x = 0, x = -2, and x = 1",
+                            "No real solutions"
+                        ],
+                        correct: 0,
+                        hint: "Factor out xe^x from both terms, and remember that e^x is strictly positive (never 0) for all real x.",
+                        rationale: [
+                            "1. Factor out the greatest common factor xe^x: xe^x(x + 2) = 0.",
+                            "2. Since e^x > 0 for all real x, e^x can never equal 0.",
+                            "3. Thus x = 0 or x + 2 = 0  ⇒  x = 0, -2."
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'mod5',
+                number: 5,
+                title: "Limits & Continuity",
+                subtitle: "Resolving 0/0 indeterminate forms, trigonometric limits, one-sided limits, and continuity criteria.",
+                accent: "rose",
+                icon: "infinity",
+                cheatsheet: [
+                    "lim(x→a) f(x) = L iff left & right limits = L",
+                    "Continuous at a: f(a) = lim(x→a) f(x)",
+                    "lim(x→0) [sin(x) / x] = 1",
+                    "Indeterminate 0/0: Factor or Rationalize"
+                ],
+                questions: [
+                    {
+                        id: "m5q1",
+                        topic: "Indeterminate Form 0/0",
+                        xp: 60,
+                        prompt: `Evaluate the limit: <span class="math-expr">lim(x &rarr; 2) [ (x² - x - 2) / (x - 2) ]</span>.`,
+                        options: [
+                            "3",
+                            "0",
+                            "Does not exist",
+                            "1"
+                        ],
+                        correct: 0,
+                        hint: "Direct substitution yields 0/0. Factor the numerator and cancel the removable discontinuity (x - 2).",
+                        rationale: [
+                            "1. Direct substitution of x = 2 gives (4 - 2 - 2)/(2 - 2) = 0/0.",
+                            "2. Factor numerator: (x - 2)(x + 1) / (x - 2).",
+                            "3. Cancel (x - 2) for x ≠ 2, then substitute x = 2 into (x + 1) to get 2 + 1 = 3."
+                        ]
+                    },
+                    {
+                        id: "m5q2",
+                        topic: "Radical Limit by Conjugates",
+                        xp: 70,
+                        prompt: `Evaluate the limit: <span class="math-expr">lim(x &rarr; 0) [ (&radic;(x + 9) - 3) / x ]</span>.`,
+                        options: [
+                            "1/6",
+                            "1/3",
+                            "0",
+                            "Does not exist"
+                        ],
+                        correct: 0,
+                        hint: "Multiply numerator and denominator by the conjugate (√(x + 9) + 3), then take the limit as x → 0.",
+                        rationale: [
+                            "1. Multiply top and bottom by (√(x + 9) + 3) to get [(x + 9) - 9] / [x(√(x + 9) + 3)].",
+                            "2. Simplify numerator to x and cancel with denominator: 1 / (√(x + 9) + 3).",
+                            "3. Substitute x = 0: 1 / (√9 + 3) = 1 / (3 + 3) = 1/6."
+                        ]
+                    },
+                    {
+                        id: "m5q3",
+                        topic: "Fundamental Trigonometric Limit",
+                        xp: 60,
+                        prompt: `Given the fundamental theorem <span class="math-expr">lim(&theta; &rarr; 0) [sin(&theta;) / &theta;] = 1</span>, evaluate <span class="math-expr">lim(x &rarr; 0) [ sin(5x) / (2x) ]</span>.`,
+                        options: [
+                            "5/2",
+                            "1",
+                            "2/5",
+                            "0"
+                        ],
+                        correct: 0,
+                        hint: "Multiply top and bottom by 5 so the argument inside sin(5x) matches the denominator 5x.",
+                        rationale: [
+                            "1. Rewrite the expression as (5/2) · [ sin(5x) / (5x) ].",
+                            "2. As x → 0, let θ = 5x → 0, so lim [sin(5x)/(5x)] = 1.",
+                            "3. Multiply by the constant factor: (5/2) · 1 = 5/2."
+                        ]
+                    },
+                    {
+                        id: "m5q4",
+                        topic: "Piecewise Continuity",
+                        xp: 70,
+                        prompt: `For what value of <span class="math-expr">k</span> is the piecewise function <span class="math-expr">f(x) = { x² - 1 if x &lt; 2 ; kx + 1 if x &ge; 2 }</span> continuous at <span class="math-expr">x = 2</span>?`,
+                        options: [
+                            "k = 1",
+                            "k = 3/2",
+                            "k = 2",
+                            "k = 0"
+                        ],
+                        correct: 0,
+                        hint: "For continuity at x = 2, the left-hand limit as x → 2⁻ must equal the right-hand limit as x → 2⁺.",
+                        rationale: [
+                            "1. Left-hand limit: lim(x → 2⁻) (x² - 1) = 2² - 1 = 3.",
+                            "2. Right-hand limit & value: lim(x → 2⁺) (kx + 1) = 2k + 1.",
+                            "3. Equate both sides: 2k + 1 = 3  ⇒  2k = 2  ⇒  k = 1."
+                        ]
+                    },
+                    {
+                        id: "m5q5",
+                        topic: "One-Sided Absolute Value Limit",
+                        xp: 60,
+                        prompt: `Evaluate the left-hand limit: <span class="math-expr">lim(x &rarr; 4⁻) [ |x - 4| / (x - 4) ]</span>.`,
+                        options: [
+                            "-1",
+                            "1",
+                            "0",
+                            "4"
+                        ],
+                        correct: 0,
+                        hint: "When x approaches 4 from the left (x < 4), the quantity (x - 4) is negative, so |x - 4| = -(x - 4).",
+                        rationale: [
+                            "1. For x < 4, (x - 4) < 0, so by definition of absolute value, |x - 4| = -(x - 4).",
+                            "2. Substitute into the fraction: -(x - 4) / (x - 4) = -1.",
+                            "3. Therefore, the left-hand limit is -1."
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        /**************************************************************
+         * 3. CURATED TUTOR & STUDY RESOURCES DIRECTORY
+         **************************************************************/
+        const RESOURCES = [
+            {
+                educator: "The Organic Chemistry Tutor",
+                badge: "Problem-Solving Gold Standard",
+                accent: "cyan",
+                modules: ["mod1", "mod2", "mod3", "mod4", "mod5"],
+                title: "Precalculus & Calculus 1 Complete Review Playlists",
+                description: "Rapid-fire, crystal-clear worked examples covering factoring, rationalizing conjugates, trig identities, and every type of limit problem.",
+                strategy: "Best used when you get stuck on a specific algebraic manipulation: pause the video, work the problem yourself, and compare steps.",
+                url: "https://www.youtube.com/@TheOrganicChemistryTutor"
+            },
+            {
+                educator: "Professor Leonard",
+                badge: "Full University Lectures",
+                accent: "indigo",
+                modules: ["mod2", "mod3", "mod5"],
+                title: "Calculus 1 (Full Length Classroom Lectures)",
+                description: "Deep, intuitive chalkboard lectures that build every theorem from the ground up with zero steps skipped and infectious enthusiasm.",
+                strategy: "Watch his 'Precalculus Review' and 'Introduction to Limits' lectures at 1.25x speed before your first week of Calc 1.",
+                url: "https://www.youtube.com/@ProfessorLeonard"
+            },
+            {
+                educator: "Khan Academy",
+                badge: "Structured Mastery Drills",
+                accent: "emerald",
+                modules: ["mod1", "mod2", "mod3", "mod4", "mod5"],
+                title: "Get Ready for AP® Calculus / College Calculus 1",
+                description: "Interactive bite-sized videos paired with adaptive practice sets covering composite functions, unit circle fluency, and limit laws.",
+                strategy: "Take the unit mastery challenges on Trigonometry and Composite Functions to pinpoint any remaining blind spots.",
+                url: "https://www.khanacademy.org/math/get-ready-for-ap-calc"
+            },
+            {
+                educator: "Paul's Online Math Notes",
+                badge: "Written Reference & Cheat Sheets",
+                accent: "amber",
+                modules: ["mod1", "mod4", "mod5"],
+                title: "Lamar University Calculus I & Algebra/Trig Review",
+                description: "Written by Prof. Paul Dawkins—features legendary 'Common Math Errors' pages, printable Algebra/Trig cheat sheets, and step-by-step dropdown solutions.",
+                strategy: "Bookmark the 'Algebra/Trig Review' section and keep it open alongside your homework all semester.",
+                url: "https://tutorial.math.lamar.edu/Classes/CalcI/CalcI.aspx"
+            },
+            {
+                educator: "3Blue1Brown (Grant Sanderson)",
+                badge: "Geometric Intuition",
+                accent: "rose",
+                modules: ["mod2", "mod3", "mod5"],
+                title: "Essence of Calculus Visual Series",
+                description: "Stunning visual animations that make derivatives, limits, exponential self-similarity (eˣ), and the Fundamental Theorem feel like your own discovery.",
+                strategy: "Watch Chapter 1 ('The Paradox of the Derivative') right after experimenting with our Secant-to-Tangent Lab.",
+                url: "https://www.youtube.com/playlist?list=PLZHQObOWTQDMsr9K-rj53DwVRMYO3t5Yr"
+            },
+            {
+                educator: "PatrickJMT & Blackpenredpen",
+                badge: "Speed Drills & Competitions",
+                accent: "cyan",
+                modules: ["mod1", "mod3", "mod4", "mod5"],
+                title: "100 Limits & Derivative Marathon Sessions",
+                description: "Focused 5-minute tutorials (PatrickJMT) and epic 100-problem marathons (Blackpenredpen) to build automaticity with algebraic tricks.",
+                strategy: "Once you finish all 5 modules in CalcQuest, try 10 problems from Blackpenredpen's '100 Limits' video to cement speed.",
+                url: "https://www.youtube.com/@blackpenredpen"
+            }
+        ];
+
+        /**************************************************************
+         * 4. PERSISTENT APPLICATION STATE (localStorage)
+         **************************************************************/
+        const STORAGE_KEY = 'calcquest_state_v1';
+        let appState = {
+            xp: 0,
+            streak: 0,
+            bestStreak: 0,
+            solvedIds: [],
+            soundEnabled: true,
+            activeModuleIndex: 0,
+            activeQuestionIndex: 0
+        };
+
+        function loadState() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    appState = { ...appState, ...parsed };
+                }
+            } catch (e) {
+                console.warn('Could not read localStorage', e);
+            }
+        }
+
+        function saveState() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+            } catch (e) {
+                console.warn('Could not write localStorage', e);
+            }
+        }
+
+        /**************************************************************
+         * 5. GAMIFIED HUD, RANKS & MODULE PROGRESSION RENDERING
+         **************************************************************/
+        function getCurrentRankInfo(xp) {
+            let current = RANKS[0];
+            let next = RANKS[1] || null;
+            for (let i = 0; i < RANKS.length; i++) {
+                if (xp >= RANKS[i].minXP) {
+                    current = RANKS[i];
+                    next = RANKS[i + 1] || null;
+                }
+            }
+            let pct = 100;
+            if (next) {
+                pct = Math.min(100, Math.round(((xp - current.minXP) / (next.minXP - current.minXP)) * 100));
+            }
+            return { current, next, pct };
+        }
+
+        function updateHUD() {
+            const { current, pct } = getCurrentRankInfo(appState.xp);
+            document.getElementById('hud-streak').textContent = appState.streak;
+            document.getElementById('hud-xp-text').textContent = appState.xp;
+            document.getElementById('hud-level-badge').textContent = `LVL ${current.level}`;
+            document.getElementById('hud-rank-title').textContent = current.title;
+            document.getElementById('hud-xp-bar').style.width = `${pct}%`;
+
+            // Overall mastery stats
+            const totalQuestions = MODULES.reduce((acc, m) => acc + m.questions.length, 0);
+            const solvedCount = appState.solvedIds.length;
+            const masteryPct = Math.round((solvedCount / totalQuestions) * 100);
+
+            document.getElementById('overall-mastery-pct').textContent = `${masteryPct}%`;
+            document.getElementById('overall-mastery-bar').style.width = `${masteryPct}%`;
+            document.getElementById('stat-solved-count').textContent = `${solvedCount}/${totalQuestions}`;
+            document.getElementById('stat-best-streak').textContent = appState.bestStreak;
+
+            // Sound icon state
+            const soundBtn = document.getElementById('sound-toggle-btn');
+            soundBtn.innerHTML = appState.soundEnabled
+                ? '<i data-lucide="volume-2" class="w-4 h-4 text-cyan-400"></i>'
+                : '<i data-lucide="volume-x" class="w-4 h-4 text-gray-500"></i>';
+
+            renderRankLadder();
+            lucide.createIcons();
+        }
+
+        function renderRankLadder() {
+            const container = document.getElementById('rank-ladder-list');
+            const { current } = getCurrentRankInfo(appState.xp);
+            container.innerHTML = RANKS.map(r => {
+                const unlocked = appState.xp >= r.minXP;
+                const isCurrent = r.level === current.level;
+                return `
+                    <div class="flex items-center justify-between px-3 py-2 rounded-xl border ${isCurrent ? 'bg-cyan-500/15 border-cyan-500/40' : unlocked ? 'bg-gray-900/70 border-gray-800' : 'bg-gray-950/40 border-gray-900 opacity-50'}">
+                        <div class="flex items-center gap-2">
+                            <span class="font-mono font-bold text-xs ${r.badgeColor}">LVL ${r.level}</span>
+                            <span class="font-medium text-white">${r.title}</span>
+                        </div>
+                        <span class="font-mono text-[11px] ${unlocked ? 'text-emerald-400' : 'text-gray-500'}">
+                            ${unlocked ? '✓ Unlocked' : `${r.minXP} XP`}
+                        </span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderModuleProgressionMap() {
+            const container = document.getElementById('module-progression-container');
+            const accentMap = {
+                cyan: { badge: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30', bar: 'bg-cyan-400', border: 'hover:border-cyan-500/50' },
+                indigo: { badge: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30', bar: 'bg-indigo-400', border: 'hover:border-indigo-500/50' },
+                emerald: { badge: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30', bar: 'bg-emerald-400', border: 'hover:border-emerald-500/50' },
+                amber: { badge: 'bg-amber-500/15 text-amber-300 border-amber-500/30', bar: 'bg-amber-400', border: 'hover:border-amber-500/50' },
+                rose: { badge: 'bg-rose-500/15 text-rose-300 border-rose-500/30', bar: 'bg-rose-400', border: 'hover:border-rose-500/50' }
+            };
+
+            container.innerHTML = MODULES.map((mod, idx) => {
+                const solvedInMod = mod.questions.filter(q => appState.solvedIds.includes(q.id)).length;
+                const totalInMod = mod.questions.length;
+                const pct = Math.round((solvedInMod / totalInMod) * 100);
+                const isComplete = solvedInMod === totalInMod;
+                const st = accentMap[mod.accent] || accentMap.cyan;
+
+                return `
+                    <div onclick="launchModulePractice(${idx})" class="glass-card rounded-2xl p-5 cursor-pointer ${st.border} relative overflow-hidden group">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 rounded-2xl flex items-center justify-center font-mono font-extrabold text-lg shrink-0 border ${st.badge} ${pct > 0 && pct < 100 ? 'node-active' : ''}">
+                                    ${isComplete ? '<i data-lucide="check-circle-2" class="w-6 h-6 text-emerald-400"></i>' : `0${mod.number}`}
+                                </div>
+                                <div class="space-y-1">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="text-[11px] font-mono uppercase tracking-wider px-2 py-0.5 rounded border ${st.badge}">Module ${mod.number}</span>
+                                        ${isComplete ? '<span class="text-[11px] font-mono text-emerald-400 font-bold">★ MASTERED</span>' : ''}
+                                    </div>
+                                    <h4 class="text-base sm:text-lg font-bold text-white group-hover:text-cyan-300 transition-colors">${mod.title}</h4>
+                                    <p class="text-xs text-gray-400 leading-relaxed max-w-xl">${mod.subtitle}</p>
+                                </div>
+                            </div>
+
+                            <div class="sm:text-right flex sm:flex-col items-center sm:items-end justify-between gap-2 shrink-0 border-t sm:border-t-0 border-gray-800/80 pt-3 sm:pt-0">
+                                <div class="text-xs font-mono text-gray-300">
+                                    <span class="font-bold text-white">${solvedInMod}/${totalInMod}</span> Solved
+                                </div>
+                                <div class="w-28 h-2 bg-gray-800 rounded-full overflow-hidden">
+                                    <div class="h-full ${st.bar} transition-all duration-500" style="width: ${pct}%"></div>
+                                </div>
+                                <span class="text-xs font-semibold text-cyan-400 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                                    ${solvedInMod === 0 ? 'Start Quest' : isComplete ? 'Review Arena' : 'Continue'} <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        /**************************************************************
+         * 6. PRACTICE ARENA ENGINE (INSTANT VALIDATION & RATIONALES)
+         **************************************************************/
+        function launchModulePractice(moduleIdx) {
+            playTone('click');
+            appState.activeModuleIndex = moduleIdx;
+            // Find first unsolved question in module, or default to 0
+            const mod = MODULES[moduleIdx];
+            const firstUnsolved = mod.questions.findIndex(q => !appState.solvedIds.includes(q.id));
+            appState.activeQuestionIndex = firstUnsolved !== -1 ? firstUnsolved : 0;
+            saveState();
+            switchTab('practice');
+        }
+
+        function renderPracticeArena() {
+            const mod = MODULES[appState.activeModuleIndex];
+            const q = mod.questions[appState.activeQuestionIndex];
+            const isAlreadySolved = appState.solvedIds.includes(q.id);
+
+            // Header & Module Switcher Pills
+            document.getElementById('arena-module-tag').textContent = `MODULE ${mod.number} OF 5`;
+            document.getElementById('arena-module-title').textContent = mod.title;
+
+            const pillsContainer = document.getElementById('arena-module-pills');
+            pillsContainer.innerHTML = MODULES.map((m, idx) => {
+                const active = idx === appState.activeModuleIndex;
+                return `
+                    <button onclick="selectArenaModule(${idx})" class="px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all shrink-0 ${active ? 'bg-cyan-500 text-gray-950 shadow' : 'bg-gray-950 text-gray-400 hover:text-white border border-gray-800'}">
+                        M${m.number}
+                    </button>
+                `;
+            }).join('');
+
+            // Question Metadata
+            document.getElementById('question-number-badge').textContent = `Problem ${appState.activeQuestionIndex + 1} of ${mod.questions.length}`;
+            document.getElementById('question-topic-pill').textContent = q.topic;
+            document.getElementById('question-xp-badge').textContent = isAlreadySolved ? '✓ Completed' : `+${q.xp} XP`;
+            document.getElementById('question-prompt').innerHTML = q.prompt;
+
+            // Reset Hint & Rationale Boxes
+            document.getElementById('hint-box').classList.add('hidden');
+            document.getElementById('rationale-box').classList.add('hidden');
+
+            // Render Option Buttons
+            const optionsContainer = document.getElementById('question-options-container');
+            const letters = ['A', 'B', 'C', 'D'];
+            optionsContainer.innerHTML = q.options.map((optText, idx) => `
+                <button onclick="submitAnswer(${idx})" id="opt-btn-${idx}" class="w-full text-left p-4 rounded-xl bg-gray-900/90 hover:bg-gray-800/90 border border-gray-800 hover:border-cyan-500/40 transition-all flex items-center justify-between gap-3 group">
+                    <div class="flex items-center gap-3.5">
+                        <span id="opt-badge-${idx}" class="w-8 h-8 rounded-lg bg-gray-950 border border-gray-700 font-mono font-bold text-xs text-gray-300 flex items-center justify-center group-hover:border-cyan-400 group-hover:text-cyan-300 transition-colors">
+                            ${letters[idx]}
+                        </span>
+                        <span class="font-mono text-sm sm:text-base text-gray-100">${optText}</span>
+                    </div>
+                    <span id="opt-status-${idx}" class="text-xs font-mono"></span>
+                </button>
+            `).join('');
+
+            // Prev / Next state
+            document.getElementById('btn-prev-q').disabled = (appState.activeQuestionIndex === 0);
+
+            // Question Matrix Dots
+            const solvedCount = mod.questions.filter(item => appState.solvedIds.includes(item.id)).length;
+            document.getElementById('module-progress-fraction').textContent = `${solvedCount}/${mod.questions.length} Completed`;
+
+            const matrixContainer = document.getElementById('question-matrix-dots');
+            matrixContainer.innerHTML = mod.questions.map((item, idx) => {
+                const solved = appState.solvedIds.includes(item.id);
+                const current = idx === appState.activeQuestionIndex;
+                return `
+                    <button onclick="jumpToQuestion(${idx})" class="py-2 rounded-xl font-mono text-xs font-bold border transition-all flex flex-col items-center gap-0.5 ${current ? 'ring-2 ring-cyan-400 bg-cyan-500/20 border-cyan-400 text-white' : solved ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300' : 'bg-gray-900 border-gray-800 text-gray-400 hover:text-white'}">
+                        <span>Q${idx + 1}</span>
+                        <span class="text-[9px]">${solved ? '✓' : '•'}</span>
+                    </button>
+                `;
+            }).join('');
+
+            // Module Cheat Sheet
+            const cheatContainer = document.getElementById('module-cheatsheet-content');
+            cheatContainer.innerHTML = mod.cheatsheet.map(line => `
+                <div class="p-2.5 rounded-lg bg-gray-950/80 border border-gray-800/90 text-cyan-200">
+                    ${line}
+                </div>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        function selectArenaModule(idx) {
+            playTone('click');
+            appState.activeModuleIndex = idx;
+            appState.activeQuestionIndex = 0;
+            saveState();
+            renderPracticeArena();
+        }
+
+        function jumpToQuestion(idx) {
+            playTone('click');
+            appState.activeQuestionIndex = idx;
+            saveState();
+            renderPracticeArena();
+        }
+
+        function prevQuestion() {
+            if (appState.activeQuestionIndex > 0) {
+                playTone('click');
+                appState.activeQuestionIndex--;
+                saveState();
+                renderPracticeArena();
+            }
+        }
+
+        function nextQuestion() {
+            playTone('click');
+            const mod = MODULES[appState.activeModuleIndex];
+            if (appState.activeQuestionIndex < mod.questions.length - 1) {
+                appState.activeQuestionIndex++;
+            } else if (appState.activeModuleIndex < MODULES.length - 1) {
+                appState.activeModuleIndex++;
+                appState.activeQuestionIndex = 0;
+                showToast(`Advancing to Module ${appState.activeModuleIndex + 1}!`, 'cyan');
+            } else {
+                appState.activeQuestionIndex = 0;
+            }
+            saveState();
+            renderPracticeArena();
+        }
+
+        function revealHint() {
+            playTone('click');
+            const mod = MODULES[appState.activeModuleIndex];
+            const q = mod.questions[appState.activeQuestionIndex];
+            const hintBox = document.getElementById('hint-box');
+            document.getElementById('hint-text').textContent = q.hint;
+            hintBox.classList.remove('hidden');
+        }
+
+        function submitAnswer(selectedIdx) {
+            const mod = MODULES[appState.activeModuleIndex];
+            const q = mod.questions[appState.activeQuestionIndex];
+            const isCorrect = selectedIdx === q.correct;
+            const alreadySolved = appState.solvedIds.includes(q.id);
+
+            // Disable further clicks on options
+            q.options.forEach((_, idx) => {
+                const btn = document.getElementById(`opt-btn-${idx}`);
+                if (btn) btn.onclick = null;
+            });
+
+            const selectedBtn = document.getElementById(`opt-btn-${selectedIdx}`);
+            const correctBtn = document.getElementById(`opt-btn-${q.correct}`);
+
+            const rationaleBox = document.getElementById('rationale-box');
+            const statusTitle = document.getElementById('rationale-status-title');
+            const xpEarnedBadge = document.getElementById('rationale-xp-earned');
+            const stepsContainer = document.getElementById('rationale-steps');
+
+            if (isCorrect) {
+                playTone('correct');
+                selectedBtn.className = "w-full text-left p-4 rounded-xl bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-between gap-3";
+                document.getElementById(`opt-status-${selectedIdx}`).innerHTML = '<span class="text-emerald-300 font-bold">✓ CORRECT</span>';
+
+                appState.streak++;
+                if (appState.streak > appState.bestStreak) {
+                    appState.bestStreak = appState.streak;
+                }
+
+                let earnedXP = 0;
+                if (!alreadySolved) {
+                    const streakBonus = appState.streak >= 3 ? 15 : 0;
+                    earnedXP = q.xp + streakBonus;
+                    appState.xp += earnedXP;
+                    appState.solvedIds.push(q.id);
+                    showToast(`+${earnedXP} XP ${streakBonus ? '(Streak Bonus!)' : ''}`, 'emerald');
+                } else {
+                    earnedXP = 10; // Practice review XP
+                    appState.xp += earnedXP;
+                }
+
+                rationaleBox.className = "rounded-2xl p-5 space-y-3 border bg-emerald-950/30 border-emerald-500/40";
+                statusTitle.innerHTML = `<i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400"></i> <span class="text-emerald-300">Spot On! Concept Verified</span>`;
+                xpEarnedBadge.className = "font-mono text-xs font-bold px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-300";
+                xpEarnedBadge.textContent = `+${earnedXP} XP`;
+            } else {
+                playTone('wrong');
+                appState.streak = 0;
+                selectedBtn.className = "w-full text-left p-4 rounded-xl bg-rose-500/20 border-2 border-rose-500 flex items-center justify-between gap-3";
+                document.getElementById(`opt-status-${selectedIdx}`).innerHTML = '<span class="text-rose-300 font-bold">✕ NOT QUITE</span>';
+
+                correctBtn.className = "w-full text-left p-4 rounded-xl bg-emerald-500/15 border border-emerald-400/70 flex items-center justify-between gap-3";
+                document.getElementById(`opt-status-${q.correct}`).innerHTML = '<span class="text-emerald-300 font-bold">✓ CORRECT ANSWER</span>';
+
+                rationaleBox.className = "rounded-2xl p-5 space-y-3 border bg-rose-950/30 border-rose-500/40";
+                statusTitle.innerHTML = `<i data-lucide="info" class="w-5 h-5 text-rose-400"></i> <span class="text-rose-300">Review the Step-by-Step Solution Below</span>`;
+                xpEarnedBadge.className = "font-mono text-xs font-bold px-2.5 py-1 rounded-md bg-rose-500/20 text-rose-300";
+                xpEarnedBadge.textContent = "Streak Reset";
+            }
+
+            stepsContainer.innerHTML = q.rationale.map(step => `<p>${step}</p>`).join('');
+            rationaleBox.classList.remove('hidden');
+
+            saveState();
+            updateHUD();
+            renderModuleProgressionMap();
+
+            // Refresh question matrix badges without wiping current rationale view
+            const modSolved = mod.questions.filter(item => appState.solvedIds.includes(item.id)).length;
+            document.getElementById('module-progress-fraction').textContent = `${modSolved}/${mod.questions.length} Completed`;
+            lucide.createIcons();
+        }
+
+        /**************************************************************
+         * 7. INTERACTIVE HTML5 CANVAS LAB 1: FUNCTION TRANSFORMATIONS
+         **************************************************************/
+        let currentParentFn = 'quad';
+
+        function evaluateParent(fnType, u) {
+            switch (fnType) {
+                case 'quad': return u * u;
+                case 'sin': return Math.sin(u);
+                case 'exp': return Math.exp(u);
+                case 'recip': return Math.abs(u) < 0.03 ? NaN : 1 / u;
+                case 'abs': return Math.abs(u);
+                default: return u * u;
+            }
+        }
+
+        function setParentFn(fnType) {
+            playTone('click');
+            currentParentFn = fnType;
+            document.querySelectorAll('.parent-fn-btn').forEach(btn => {
+                if (btn.dataset.fn === fnType) {
+                    btn.className = "parent-fn-btn py-2 rounded-lg font-mono text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/50";
+                } else {
+                    btn.className = "parent-fn-btn py-2 rounded-lg font-mono text-xs font-bold bg-gray-800 text-gray-300 border border-gray-700 hover:border-gray-600";
+                }
+            });
+            updateTransformLab();
+        }
+
+        function resetTransformLab() {
+            playTone('click');
+            document.getElementById('slider-a').value = 1;
+            document.getElementById('slider-b').value = 1;
+            document.getElementById('slider-h').value = 0;
+            document.getElementById('slider-k').value = 0;
+            updateTransformLab();
+        }
+
+        function updateTransformLab() {
+            const a = parseFloat(document.getElementById('slider-a').value);
+            const b = parseFloat(document.getElementById('slider-b').value);
+            const h = parseFloat(document.getElementById('slider-h').value);
+            const k = parseFloat(document.getElementById('slider-k').value);
+
+            document.getElementById('val-slider-a').textContent = a.toFixed(1);
+            document.getElementById('val-slider-b').textContent = b.toFixed(1);
+            document.getElementById('val-slider-h').textContent = h.toFixed(1);
+            document.getElementById('val-slider-k').textContent = k.toFixed(1);
+
+            // Format Live Equation String
+            const hSign = h >= 0 ? `- ${h.toFixed(1)}` : `+ ${Math.abs(h).toFixed(1)}`;
+            const kSign = k >= 0 ? `+ ${k.toFixed(1)}` : `- ${Math.abs(k).toFixed(1)}`;
+            const inner = `${b.toFixed(1)}(x ${hSign})`;
+            const fnLabels = {
+                quad: `[${inner}]²`,
+                sin: `sin(${inner})`,
+                exp: `e^(${inner})`,
+                recip: `1 / [${inner}]`,
+                abs: `|${inner}|`
+            };
+            document.getElementById('transform-equation-display').textContent =
+                `f(x) = ${a.toFixed(1)} · ${fnLabels[currentParentFn]} ${kSign}`;
+
+            // Behavior note
+            const notes = [];
+            if (a < 0) notes.push("Reflected over x-axis");
+            if (Math.abs(a) > 1) notes.push("Vertically stretched");
+            if (Math.abs(a) > 0 && Math.abs(a) < 1) notes.push("Vertically compressed");
+            if (h !== 0) notes.push(h > 0 ? `Shifted right ${h.toFixed(1)}` : `Shifted left ${Math.abs(h).toFixed(1)}`);
+            if (k !== 0) notes.push(k > 0 ? `Shifted up ${k.toFixed(1)}` : `Shifted down ${Math.abs(k).toFixed(1)}`);
+            document.getElementById('transform-behavior-note').textContent = notes.length ? notes.join(' • ') : 'Standard Parent Orientation';
+
+            drawTransformCanvas(a, b, h, k);
+        }
+
+        function drawTransformCanvas(a, b, h, k) {
+            const canvas = document.getElementById('canvas-transform');
+            if (!canvas || canvas.offsetParent === null) return;
+            const rect = canvas.parentElement.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+            const W = rect.width;
+            const H = rect.height;
+
+            ctx.clearRect(0, 0, W, H);
+
+            // Coordinate system: x from -8 to 8
+            const scale = W / 16;
+            const originX = W / 2;
+            const originY = H / 2;
+
+            const toScreenX = (x) => originX + x * scale;
+            const toScreenY = (y) => originY - y * scale;
+
+            // Grid lines
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            for (let gx = -10; gx <= 10; gx++) {
+                const sx = toScreenX(gx);
+                ctx.beginPath();
+                ctx.moveTo(sx, 0);
+                ctx.lineTo(sx, H);
+                ctx.stroke();
+            }
+            for (let gy = -8; gy <= 8; gy++) {
+                const sy = toScreenY(gy);
+                ctx.beginPath();
+                ctx.moveTo(0, sy);
+                ctx.lineTo(W, sy);
+                ctx.stroke();
+            }
+
+            // Main Axes
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+            ctx.beginPath();
+            ctx.moveTo(0, originY);
+            ctx.lineTo(W, originY);
+            ctx.moveTo(originX, 0);
+            ctx.lineTo(originX, H);
+            ctx.stroke();
+
+            // Tick Labels
+            ctx.fillStyle = 'rgba(156, 163, 175, 0.65)';
+            ctx.font = '10px "JetBrains Mono", monospace';
+            for (let gx = -6; gx <= 6; gx += 2) {
+                if (gx === 0) continue;
+                ctx.fillText(gx.toString(), toScreenX(gx) - 6, originY + 14);
+            }
+            for (let gy = -4; gy <= 4; gy += 2) {
+                if (gy === 0) continue;
+                ctx.fillText(gy.toString(), originX + 6, toScreenY(gy) + 3);
+            }
+
+            // 1. Draw Dashed Parent Function g(x)
+            ctx.save();
+            ctx.setLineDash([5, 5]);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = 'rgba(156, 163, 175, 0.45)';
+            ctx.beginPath();
+            let started = false;
+            for (let px = 0; px <= W; px += 2) {
+                const x = (px - originX) / scale;
+                const y = evaluateParent(currentParentFn, x);
+                const sy = toScreenY(y);
+                if (isNaN(y) || sy < -100 || sy > H + 100) {
+                    started = false;
+                    continue;
+                }
+                if (!started) {
+                    ctx.moveTo(px, sy);
+                    started = true;
+                } else {
+                    ctx.lineTo(px, sy);
+                }
+            }
+            ctx.stroke();
+            ctx.restore();
+
+            // 2. Draw Active Transformed Function f(x) = a * g(b(x - h)) + k
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#06B6D4';
+            ctx.shadowColor = 'rgba(6, 182, 212, 0.5)';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            started = false;
+            for (let px = 0; px <= W; px += 1.5) {
+                const x = (px - originX) / scale;
+                const u = b * (x - h);
+                const rawY = evaluateParent(currentParentFn, u);
+                const y = a * rawY + k;
+                const sy = toScreenY(y);
+                if (isNaN(y) || sy < -120 || sy > H + 120) {
+                    started = false;
+                    continue;
+                }
+                if (!started) {
+                    ctx.moveTo(px, sy);
+                    started = true;
+                } else {
+                    ctx.lineTo(px, sy);
+                }
+            }
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // 3. Draw Anchor Point (h, f(h)) or Asymptote Center (h, k)
+            const anchorY = currentParentFn === 'recip' ? k : a * evaluateParent(currentParentFn, 0) + k;
+            const ax = toScreenX(h);
+            const ay = toScreenY(anchorY);
+
+            ctx.fillStyle = '#F59E0B';
+            ctx.beginPath();
+            ctx.arc(ax, ay, 5.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#090D16';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = '#FDE68A';
+            ctx.font = 'bold 11px "JetBrains Mono", monospace';
+            ctx.fillText(`(${h.toFixed(1)}, ${anchorY.toFixed(1)})`, ax + 9, ay - 8);
+        }
+
+        /**************************************************************
+         * 8. INTERACTIVE HTML5 CANVAS LAB 2: UNIT CIRCLE & SECANT LIMIT
+         **************************************************************/
+        let activeLabMode = 'transform';
+        let widget2Submode = 'trig'; // 'trig' or 'secant'
+        let limitAnimFrame = null;
+
+        function switchLabMode(mode) {
+            playTone('click');
+            activeLabMode = mode;
+            const tWidget = document.getElementById('lab-widget-transform');
+            const uWidget = document.getElementById('lab-widget-unitcircle');
+            const btnT = document.getElementById('btn-lab-transform');
+            const btnU = document.getElementById('btn-lab-unitcircle');
+
+            if (mode === 'transform') {
+                tWidget.classList.remove('hidden');
+                uWidget.classList.add('hidden');
+                btnT.className = "px-3.5 py-2 rounded-lg text-xs font-bold transition-all bg-cyan-500 text-gray-950 shadow";
+                btnU.className = "px-3.5 py-2 rounded-lg text-xs font-bold transition-all text-gray-400 hover:text-white";
+                setTimeout(updateTransformLab, 20);
+            } else {
+                tWidget.classList.add('hidden');
+                uWidget.classList.remove('hidden');
+                btnU.className = "px-3.5 py-2 rounded-lg text-xs font-bold transition-all bg-indigo-500 text-white shadow";
+                btnT.className = "px-3.5 py-2 rounded-lg text-xs font-bold transition-all text-gray-400 hover:text-white";
+                setTimeout(updateWidget2Canvas, 20);
+            }
+        }
+
+        function openLabWidget(mode) {
+            switchTab('labs');
+            switchLabMode(mode);
+        }
+
+        function setWidget2Submode(submode) {
+            playTone('click');
+            widget2Submode = submode;
+            const trigCtrl = document.getElementById('controls-submode-trig');
+            const secCtrl = document.getElementById('controls-submode-secant');
+            const btnTrig = document.getElementById('submode-btn-trig');
+            const btnSec = document.getElementById('submode-btn-secant');
+            const legend = document.getElementById('widget2-legend');
+
+            if (submode === 'trig') {
+                trigCtrl.classList.remove('hidden');
+                secCtrl.classList.add('hidden');
+                btnTrig.className = "py-2 px-3 rounded-lg text-xs font-bold bg-indigo-500 text-white transition-all";
+                btnSec.className = "py-2 px-3 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition-all";
+                legend.innerHTML = `
+                    <span class="flex items-center gap-1.5 text-emerald-400 font-medium"><span class="w-3 h-1 bg-emerald-400 inline-block"></span> cos(&theta;)</span>
+                    <span class="flex items-center gap-1.5 text-rose-400 font-medium"><span class="w-3 h-1 bg-rose-400 inline-block"></span> sin(&theta;)</span>
+                    <span class="flex items-center gap-1.5 text-cyan-300 font-medium"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block"></span> P(cos &theta;, sin &theta;)</span>
+                `;
+            } else {
+                trigCtrl.classList.add('hidden');
+                secCtrl.classList.remove('hidden');
+                btnSec.className = "py-2 px-3 rounded-lg text-xs font-bold bg-amber-500 text-gray-950 transition-all";
+                btnTrig.className = "py-2 px-3 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition-all";
+                legend.innerHTML = `
+                    <span class="flex items-center gap-1.5 text-cyan-300 font-medium"><span class="w-3 h-1 bg-cyan-400 inline-block"></span> Curve f(x)=0.25x²</span>
+                    <span class="flex items-center gap-1.5 text-emerald-400 font-medium"><span class="w-3 h-0.5 bg-emerald-400 inline-block"></span> True Tangent</span>
+                    <span class="flex items-center gap-1.5 text-amber-400 font-medium"><span class="w-3 h-1 bg-amber-400 inline-block"></span> Secant Line</span>
+                `;
+            }
+            updateWidget2Canvas();
+        }
+
+        function setTrigAngle(deg) {
+            playTone('click');
+            document.getElementById('slider-trig-angle').value = deg;
+            updateWidget2Canvas();
+        }
+
+        const RADIAN_LABELS = {
+            0: "0", 30: "π/6", 45: "π/4", 60: "π/3", 90: "π/2",
+            120: "2π/3", 135: "3π/4", 150: "5π/6", 180: "π",
+            210: "7π/6", 225: "5π/4", 240: "4π/3", 270: "3π/2",
+            300: "5π/3", 315: "7π/4", 330: "11π/6", 360: "2π"
+        };
+
+        function updateWidget2Canvas() {
+            const canvas = document.getElementById('canvas-widget2');
+            if (!canvas || canvas.offsetParent === null) return;
+            const rect = canvas.parentElement.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+            const W = rect.width;
+            const H = rect.height;
+            ctx.clearRect(0, 0, W, H);
+
+            if (widget2Submode === 'trig') {
+                drawUnitCircleSubmode(ctx, W, H);
+            } else {
+                drawSecantLimitSubmode(ctx, W, H);
+            }
+        }
+
+        function drawUnitCircleSubmode(ctx, W, H) {
+            const deg = parseInt(document.getElementById('slider-trig-angle').value, 10);
+            const rad = (deg * Math.PI) / 180;
+            const cosVal = Math.cos(rad);
+            const sinVal = Math.sin(rad);
+            const tanVal = Math.abs(cosVal) < 1e-5 ? null : sinVal / cosVal;
+
+            const radStr = RADIAN_LABELS[deg] || `${(deg / 180).toFixed(2)}π`;
+            document.getElementById('val-trig-angle').textContent = `${deg}° (${radStr})`;
+            document.getElementById('readout-cos').textContent = cosVal.toFixed(3);
+            document.getElementById('readout-sin').textContent = sinVal.toFixed(3);
+            document.getElementById('readout-tan').textContent = tanVal === null ? 'Undefined (Asymptote)' : tanVal.toFixed(3);
+
+            const cx = W / 2;
+            const cy = H / 2;
+            const R = Math.min(W, H) * 0.34;
+
+            // Subtle Grid
+            ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, cy); ctx.lineTo(W, cy);
+            ctx.moveTo(cx, 0); ctx.lineTo(cx, H);
+            ctx.stroke();
+
+            // Unit Circle Ring
+            ctx.strokeStyle = 'rgba(99, 102, 241, 0.45)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(cx, cy, R, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Angle Arc
+            ctx.strokeStyle = '#F59E0B';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(cx, cy, R * 0.22, 0, -rad, true);
+            ctx.stroke();
+
+            const px = cx + cosVal * R;
+            const py = cy - sinVal * R;
+
+            // Cosine Projection (Horizontal Emerald)
+            ctx.strokeStyle = '#10B981';
+            ctx.lineWidth = 3.5;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(px, cy);
+            ctx.stroke();
+
+            // Sine Projection (Vertical Rose)
+            ctx.strokeStyle = '#F43F5E';
+            ctx.lineWidth = 3.5;
+            ctx.beginPath();
+            ctx.moveTo(px, cy);
+            ctx.lineTo(px, py);
+            ctx.stroke();
+
+            // Hypotenuse Radius Vector (r = 1)
+            ctx.strokeStyle = '#E5E7EB';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(px, py);
+            ctx.stroke();
+
+            // Terminal Point P
+            ctx.fillStyle = '#06B6D4';
+            ctx.beginPath();
+            ctx.arc(px, py, 6.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ECFEFF';
+            ctx.font = 'bold 12px "JetBrains Mono", monospace';
+            const labelOffsetX = cosVal >= 0 ? 10 : -115;
+            const labelOffsetY = sinVal >= 0 ? -10 : 18;
+            ctx.fillText(`P(${cosVal.toFixed(2)}, ${sinVal.toFixed(2)})`, px + labelOffsetX, py + labelOffsetY);
+        }
+
+        function drawSecantLimitSubmode(ctx, W, H) {
+            const x0 = parseFloat(document.getElementById('slider-secant-x0').value);
+            const dx = parseFloat(document.getElementById('slider-secant-dx').value);
+            const x1 = x0 + dx;
+
+            const fn = (x) => 0.25 * x * x;
+            const y0 = fn(x0);
+            const y1 = fn(x1);
+
+            const secantSlope = (y1 - y0) / dx;
+            const tangentSlope = 0.5 * x0; // derivative of 0.25x^2 is 0.5x
+            const err = Math.abs(secantSlope - tangentSlope);
+
+            document.getElementById('val-secant-x0').textContent = x0.toFixed(2);
+            document.getElementById('val-secant-dx').textContent = dx.toFixed(2);
+            document.getElementById('readout-secant-slope').textContent = secantSlope.toFixed(3);
+            document.getElementById('readout-tangent-slope').textContent = tangentSlope.toFixed(3);
+            document.getElementById('readout-slope-error').textContent = err.toFixed(3);
+
+            const scale = W / 12;
+            const originX = W / 2;
+            const originY = H * 0.72;
+            const toSX = (x) => originX + x * scale;
+            const toSY = (y) => originY - y * scale;
+
+            // Grid
+            ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+            ctx.lineWidth = 1;
+            for (let gx = -6; gx <= 6; gx++) {
+                ctx.beginPath(); ctx.moveTo(toSX(gx), 0); ctx.lineTo(toSX(gx), H); ctx.stroke();
+            }
+            for (let gy = -2; gy <= 6; gy++) {
+                ctx.beginPath(); ctx.moveTo(0, toSY(gy)); ctx.lineTo(W, toSY(gy)); ctx.stroke();
+            }
+
+            // Axes
+            ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(0, originY); ctx.lineTo(W, originY);
+            ctx.moveTo(originX, 0); ctx.lineTo(originX, H);
+            ctx.stroke();
+
+            // Curve f(x) = 0.25x^2
+            ctx.strokeStyle = '#06B6D4';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            for (let px = 0; px <= W; px += 2) {
+                const x = (px - originX) / scale;
+                const sy = toSY(fn(x));
+                if (px === 0) ctx.moveTo(px, sy);
+                else ctx.lineTo(px, sy);
+            }
+            ctx.stroke();
+
+            // True Tangent Line (Dashed Emerald)
+            ctx.save();
+            ctx.setLineDash([6, 4]);
+            ctx.strokeStyle = '#10B981';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            const xLeft = -6, xRight = 6;
+            ctx.moveTo(toSX(xLeft), toSY(y0 + tangentSlope * (xLeft - x0)));
+            ctx.lineTo(toSX(xRight), toSY(y0 + tangentSlope * (xRight - x0)));
+            ctx.stroke();
+            ctx.restore();
+
+            // Secant Line (Amber)
+            ctx.strokeStyle = '#F59E0B';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(toSX(xLeft), toSY(y0 + secantSlope * (xLeft - x0)));
+            ctx.lineTo(toSX(xRight), toSY(y0 + secantSlope * (xRight - x0)));
+            ctx.stroke();
+
+            // Anchor Point P(x0, y0) & Moving Secant Point Q(x0+dx, y1)
+            const sx0 = toSX(x0), sy0 = toSY(y0);
+            const sx1 = toSX(x1), sy1 = toSY(y1);
+
+            // Delta x & Delta y Rise/Run triangle
+            ctx.strokeStyle = 'rgba(245, 158, 11, 0.45)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(sx0, sy0);
+            ctx.lineTo(sx1, sy0);
+            ctx.lineTo(sx1, sy1);
+            ctx.stroke();
+
+            ctx.fillStyle = '#10B981';
+            ctx.beginPath(); ctx.arc(sx0, sy0, 6, 0, Math.PI * 2); ctx.fill();
+
+            ctx.fillStyle = '#F59E0B';
+            ctx.beginPath(); ctx.arc(sx1, sy1, 6, 0, Math.PI * 2); ctx.fill();
+
+            ctx.fillStyle = '#FDE68A';
+            ctx.font = 'bold 11px "JetBrains Mono", monospace';
+            ctx.fillText(`x₀`, sx0 - 16, sy0 - 10);
+            ctx.fillText(`x₀ + Δx`, sx1 + 8, sy1 - 8);
+        }
+
+        function animateLimitToZero() {
+            playTone('click');
+            if (limitAnimFrame) cancelAnimationFrame(limitAnimFrame);
+            const slider = document.getElementById('slider-secant-dx');
+            slider.value = 2.8;
+
+            function step() {
+                let current = parseFloat(slider.value);
+                if (current > 0.03) {
+                    current = Math.max(0.01, current * 0.94);
+                    slider.value = current;
+                    updateWidget2Canvas();
+                    limitAnimFrame = requestAnimationFrame(step);
+                } else {
+                    slider.value = 0.01;
+                    updateWidget2Canvas();
+                    playTone('correct');
+                    showToast('Secant line converged to Tangent Derivative!', 'emerald');
+                }
+            }
+            step();
+        }
+
+        /**************************************************************
+         * 9. CURATED RESOURCE DIRECTORY RENDERING & FILTERING
+         **************************************************************/
+        function renderResources(filterKey = 'all') {
+            const container = document.getElementById('resources-grid');
+            const filtered = filterKey === 'all'
+                ? RESOURCES
+                : RESOURCES.filter(r => r.modules.includes(filterKey));
+
+            container.innerHTML = filtered.map(res => `
+                <div class="glass-card rounded-2xl p-6 flex flex-col justify-between gap-4">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-[11px] font-mono uppercase tracking-wider px-2.5 py-1 rounded-md bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-semibold">
+                                ${res.badge}
+                            </span>
+                            <i data-lucide="external-link" class="w-4 h-4 text-gray-400"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-white">${res.educator}</h3>
+                            <p class="text-xs font-mono text-indigo-300 mt-0.5">${res.title}</p>
+                        </div>
+                        <p class="text-xs sm:text-sm text-gray-300 leading-relaxed">
+                            ${res.description}
+                        </p>
+                        <div class="p-3 rounded-xl bg-gray-950/80 border border-gray-800 text-xs text-gray-300">
+                            <strong class="text-amber-300 font-mono uppercase text-[10px] block mb-0.5">Recommended Study Strategy:</strong>
+                            ${res.strategy}
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t border-gray-800/80 flex items-center justify-between">
+                        <div class="flex gap-1">
+                            ${res.modules.map(m => `<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 uppercase">${m}</span>`).join('')}
+                        </div>
+                        <a href="${res.url}" target="_blank" rel="noopener noreferrer" class="px-3.5 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-300 font-bold text-xs flex items-center gap-1.5 transition-all">
+                            Open Hub <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function filterResources(filterKey) {
+            playTone('click');
+            document.querySelectorAll('.res-filter-btn').forEach(btn => {
+                if (btn.dataset.filter === filterKey) {
+                    btn.className = "res-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-500 text-gray-950 transition-all";
+                } else {
+                    btn.className = "res-filter-btn px-3 py-1.5 rounded-xl text-xs font-medium bg-gray-900 text-gray-300 border border-gray-800 hover:border-gray-700";
+                }
+            });
+            renderResources(filterKey);
+        }
+
+        /**************************************************************
+         * 10. NAVIGATION, TOASTS & SETTINGS CONTROLLER
+         **************************************************************/
+        let currentTab = 'map';
+
+        function switchTab(tabName) {
+            currentTab = tabName;
+            const views = ['map', 'practice', 'labs', 'resources'];
+            views.forEach(v => {
+                const el = document.getElementById(`view-${v}`);
+                if (v === tabName) el.classList.remove('hidden');
+                else el.classList.add('hidden');
+
+                // Desktop Nav active state
+                const dBtn = document.getElementById(`nav-desktop-${v}`);
+                if (dBtn) {
+                    if (v === tabName) {
+                        dBtn.className = "nav-btn px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-cyan-500/15 text-cyan-300 border border-cyan-500/30";
+                    } else {
+                        dBtn.className = "nav-btn px-3.5 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white transition-all flex items-center gap-2";
+                    }
+                }
+
+                // Mobile Nav active state
+                const mBtn = document.getElementById(`nav-mobile-${v}`);
+                if (mBtn) {
+                    if (v === tabName) {
+                        mBtn.className = "flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-cyan-400";
+                    } else {
+                        mBtn.className = "flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-gray-400";
+                    }
+                }
+            });
+
+            if (tabName === 'practice') {
+                renderPracticeArena();
+            } else if (tabName === 'labs') {
+                setTimeout(() => {
+                    if (activeLabMode === 'transform') updateTransformLab();
+                    else updateWidget2Canvas();
+                }, 30);
+            } else if (tabName === 'map') {
+                renderModuleProgressionMap();
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function toggleSound() {
+            appState.soundEnabled = !appState.soundEnabled;
+            saveState();
+            updateHUD();
+            if (appState.soundEnabled) playTone('click');
+            showToast(appState.soundEnabled ? 'Synthesized Audio Enabled' : 'Audio Muted', 'cyan');
+        }
+
+        function openResetModal() {
+            playTone('click');
+            document.getElementById('reset-modal').classList.remove('hidden');
+        }
+
+        function closeResetModal() {
+            playTone('click');
+            document.getElementById('reset-modal').classList.add('hidden');
+        }
+
+        function confirmResetProgress() {
+            appState = {
+                xp: 0,
+                streak: 0,
+                bestStreak: 0,
+                solvedIds: [],
+                soundEnabled: appState.soundEnabled,
+                activeModuleIndex: 0,
+                activeQuestionIndex: 0
+            };
+            saveState();
+            closeResetModal();
+            updateHUD();
+            renderModuleProgressionMap();
+            if (currentTab === 'practice') renderPracticeArena();
+            showToast('Progress Reset to Level 1', 'amber');
+        }
+
+        function showToast(message, color = 'cyan') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const colorMap = {
+                cyan: 'bg-cyan-950/90 border-cyan-400/50 text-cyan-200',
+                emerald: 'bg-emerald-950/90 border-emerald-400/50 text-emerald-200',
+                amber: 'bg-amber-950/90 border-amber-400/50 text-amber-200'
+            };
+            toast.className = `px-4 py-2.5 rounded-xl border font-mono text-xs font-bold shadow-xl backdrop-blur-md transition-all duration-300 ${colorMap[color] || colorMap.cyan}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-10px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 2200);
+        }
+
+        // Handle Responsive Canvas Redraws
+        window.addEventListener('resize', () => {
+            if (currentTab === 'labs') {
+                if (activeLabMode === 'transform') updateTransformLab();
+                else updateWidget2Canvas();
+            }
+        });
+
+        // Initialize Application on Load
+        window.onload = function () {
+            loadState();
+            updateHUD();
+            renderModuleProgressionMap();
+            renderResources('all');
+            lucide.createIcons();
+        };
+    </script>
+</body>
+</html>
